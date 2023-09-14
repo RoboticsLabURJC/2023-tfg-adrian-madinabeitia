@@ -22,7 +22,7 @@ subtitle                 : # site tagline that appears below site title in masth
 name                     : "Adrián Madinabeitia Portanova"
 description              : "Neural networks in drones"
 
-url                      : https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
+url                      : https://roboticslaburjc.github.io # the base hostname & protocol for your site e.g. "https://mmistakes.github.io"
 baseurl                  : # the subpath of your site, e.g. "/blog"
 repository               : https://github.com/RoboticsLabURJC/2023-tfg-adrian-madinabeitia # GitHub username/repo-name e.g. "mmistakes/minimal-mistakes"
 teaser                   : "/assets/images/logo.png" # path of fallback teaser image, e.g. "/assets/images/500x300.png"
@@ -133,14 +133,15 @@ author:
     - label: "GitHub"
       icon: "fab fa-fw fa-github"
       url: "https://github.com/madinabeip"
+
+    - label: "Linkedin"
+      icon: "fab fa-fw fa-linkedin"
+       url: https://www.linkedin.com/in/madinabeip/
       
 #    - label: "Instagram"
 #      icon: "fab fa-fw fa-instagram"
       # url: "https://instagram.com/"
 
-    - label: "Linkedin"
-      icon: "fas fa-fw fa-linkedin"
-      url: "https://www.linkedin.com/in/madinabeip/"
 
 # Site Footer
 footer:
@@ -155,10 +156,6 @@ footer:
       icon: "fab fa-fw fa-github"
       url: "https://github.com/madinabeip"
 
-    - label: "Linkedin"
-      icon: "fas fa-fw fa-linkedin"
-      url: "https://www.linkedin.com/in/madinabeip/"
-
       # url:
 #    - label: "GitLab"
 #      icon: "fab fa-fw fa-gitlab"
@@ -166,9 +163,9 @@ footer:
 #    - label: "Bitbucket"
 #      icon: "fab fa-fw fa-bitbucket"
       # url:
-#    - label: "Instagram"
-#      icon: "fab fa-fw fa-instagram"
-      # url:
+    - label: "Linkedin"
+      icon: "fab fa-fw fa-linkedin"
+       url: https://www.linkedin.com/in/madinabeip/
 
 
 # Reading Files
@@ -308,4 +305,4 @@ defaults:
       read_time: true
       comments: # true
       share: true
-      related: true
+      related: false
