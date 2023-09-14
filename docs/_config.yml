@@ -1,15 +1,26 @@
 theme: jekyll-theme-minimal
-title: Robotics Lab URJC
-description: First trial with githubpages
+title                    : "Robotics Lab URJC"
+title_separator          : "-"
+subtitle                 : Programming a Drone with neural networks
+name                     : "JdeRobot"
+description              : "Programming a Drone with neural networks"
+url                      : https://roboticslaburjc.github.io # https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/
+baseurl                  : "/2023-tfg-adrian-madinabeitia"
+repository               : "RoboticsLabURJC/2023-tfg-adrian-madinabeitia"
+logo                     : ./logo.png
 
 
 # Defaults
 defaults:
 
-  # _pages
+  # _posts
   - scope:
-      path: "_pages"
-      type: pages
+      path: ""
+      type: posts
     values:
       layout: single
       author_profile: true
+      read_time: true
+      comments: # true
+      share: true
+      related: true
