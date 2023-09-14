@@ -96,6 +96,7 @@ social:
   type                   : # Person or Organization (defaults to Person)
   name                   : # If the user or organization name differs from the site's name
   links: # An array of links to social media profiles
+    - "https://www.linkedin.com/in/madinabeip/" 
 
 # Analytics
 #analytics:
@@ -116,10 +117,6 @@ author:
     #- label: "Email"
     #  icon: "fas fa-fw fa-envelope-square"
     #  url: "portanova2002@gmail.com"
-
-    - label: "Website"
-      icon: "fas fa-fw fa-linkedin"
-      url: "https://www.linkedin.com/in/madinabeip/"
 
 #    - label: "Twitter"
 #      icon: "fab fa-fw fa-twitter-square"
