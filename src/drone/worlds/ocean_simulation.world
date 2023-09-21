@@ -1,0 +1,24 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="ocean_simulation">
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://ocean</uri>
+      <pose>0 0 0.1 0 0 0</pose>
+    </include>
+
+	  <include>
+      <uri>model://boat_beacon</uri>
+    </include>
+
+	  <include>
+      <uri>model://iris</uri>
+      <pose>0 0 1.4 0 0 0</pose>
+    </include>
+
+  </world>
+</sdf>
