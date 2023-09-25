@@ -26,10 +26,6 @@ def generate_launch_description():
         Node(package='joy', executable='joy_node', output='screen',
              namespace=ns),
 
-        # Joystick controller, generates /namespace/cmd_vel messages
-        Node(package='tello_driver', executable='tello_joy_main', output='screen',
-              namespace=ns),
-
         # Launch Gazebo, loading tello.world
         ExecuteProcess(cmd=[
             'gazebo',

@@ -75,7 +75,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY models worlds launch
+  DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}
 )
 
