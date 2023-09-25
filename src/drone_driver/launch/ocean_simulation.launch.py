@@ -7,15 +7,15 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import ExecuteProcess
 
-ns = 'drone'
+ns = 'tello_drone'
 def generate_launch_description():
-    world_path = os.path.join(get_package_share_directory('drone'), 'worlds', 'ocean_simulation.world')
-    urdf_path = os.path.join(get_package_share_directory('drone'), 'urdf', 'tello1.urdf')
+    world_path = os.path.join(get_package_share_directory('drone_driver'), 'worlds', 'ocean_simulation.world')
+    urdf_path = os.path.join(get_package_share_directory('drone_driver'), 'urdf', 'tello.urdf')
 
     return LaunchDescription([
 
         # Spawn tello.urdf
-        Node(package='tello_gazebo', executable='inject_entity.py', output='screen',
+        Node(package='drone_driver', executable='inject_entity.py', output='screen',
             arguments=[urdf_path, '0', '0', '2', '0']),
         
         # Publish static transforms
