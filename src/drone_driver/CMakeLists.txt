@@ -71,7 +71,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds urdf
+  DIRECTORY launch worlds urdf config
   DESTINATION share/${PROJECT_NAME}
 )
 

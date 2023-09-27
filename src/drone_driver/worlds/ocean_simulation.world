@@ -5,7 +5,7 @@
     <include>
       <uri>model://ground_plane</uri>
     </include>
-
+ 
     <include>
       <uri>model://ocean</uri>
       <pose>0 0 0.1 0 0 0</pose>
@@ -13,9 +13,13 @@
 
 	  <include>
       <uri>model://boat_beacon</uri>
-      <name>boat_beacon_1</name>
       <pose>0 0 0 0 0 0</pose>
-    </include>
+    </include> 
+
+	  <!-- <include>
+      <uri>model://quadrotor_name</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>  -->
 
 <!--	  <include>
       <uri>model://boat_beacon</uri>
