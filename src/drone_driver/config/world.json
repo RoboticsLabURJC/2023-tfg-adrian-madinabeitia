@@ -1,0 +1,9 @@
+{
+    "world_name": "empty",
+    "drones": [
+        {
+            "model_type": "quadrotor_base",
+            "model_name": "drone0"
+        }
+    ]
+}

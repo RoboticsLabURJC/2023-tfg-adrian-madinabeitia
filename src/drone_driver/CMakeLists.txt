@@ -8,7 +8,7 @@ endif()
 
 # Find packages
 find_package(ament_cmake REQUIRED)
-find_package(gazebo REQUIRED)  # Note uppercase variables in /usr/lib/x86_64-linux-gnu/cmake/gazebo/gazebo-config.cmake
+#find_package(gazebo REQUIRED)  # Note uppercase variables in /usr/lib/x86_64-linux-gnu/cmake/gazebo/gazebo-config.cmake
 find_package(gazebo_dev REQUIRED)
 find_package(gazebo_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -57,12 +57,6 @@ install(
   RUNTIME DESTINATION bin
 )
 
-## Install world and launch files
-install(
-  DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME}
-)
-
 ## Install Python scripts
 install(
   PROGRAMS src/inject_entity.py
@@ -71,7 +65,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds urdf config
+  DIRECTORY launch worlds urdf config models
   DESTINATION share/${PROJECT_NAME}
 )
 

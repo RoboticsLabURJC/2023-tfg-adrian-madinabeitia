@@ -5,7 +5,12 @@
     <include>
       <uri>model://ground_plane</uri>
     </include>
- 
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Scenario -->
     <include>
       <uri>model://ocean</uri>
       <pose>0 0 0.1 0 0 0</pose>
@@ -15,28 +20,6 @@
       <uri>model://boat_beacon</uri>
       <pose>0 0 0 0 0 0</pose>
     </include> 
-
-	  <!-- <include>
-      <uri>model://quadrotor_name</uri>
-      <pose>0 0 0 0 0 0</pose>
-    </include>  -->
-
-<!--	  <include>
-      <uri>model://boat_beacon</uri>
-      <name>boat_beacon_2</name>
-      <pose>0 -10 0 0 0 0</pose>
-    </include>
-
-    <include>
-      <uri>model://boat_beacon</uri>
-      <name>boat_beacon_3</name>
-      <pose>10 0 0 0 0 0</pose>
-    </include> -->
-
-	<!--  <include>
-      <uri>model://iris</uri>
-      <pose>0 0 1.4 0 0 0</pose>
-    </include> -->
 
   </world>
 </sdf>
