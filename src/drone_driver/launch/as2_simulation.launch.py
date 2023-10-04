@@ -1,7 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -9,7 +9,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     world_path = os.path.join(get_package_share_directory('drone_driver'), 'worlds', 'ocean_simulation.world')
-    sdf_path = os.path.join(get_package_share_directory('drone_driver'), 'models', 'quadrotor_base/quadrotor_base.sdf')
+    sdf_path = os.path.join(get_package_share_directory('custom_robots'), 'models', 'iris_dual_cam/iris_dual_cam.sdf')
     sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
 
     # Simulation
@@ -25,26 +25,37 @@ def generate_launch_description():
         }.items(),
     )
 
-    # Drone
     drone_spawner = Node(
-            package='gazebo_ros',
-            executable='spawn_entity.py',
-            output='screen',
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        output='screen',
+        arguments=[
+            '-entity', LaunchConfiguration('namespace'),  # Add your desired namespace here
+            '-file', sdf_path,
+            '-x', '0',
+            '-y', '0',
+            '-z', '1.4',
+            '-Y', '0'
+        ],
+    )
 
-            arguments=['-entity', 'quadrotor_base', '-file', sdf_path, '-robot_namespace' , LaunchConfiguration('namespace'), 
-                       '-x', '0', '-y', '0', '-z', '3'],
-        )
+    micro_xrce_cmd = ['MicroXRCEAgent', 'udp4', '-p', '8888']
+
+    micro_xrce = ExecuteProcess(
+    cmd = micro_xrce_cmd,
+    output = 'screen'
+    )
 
     # Aerostack2:
 
     aerial_platform = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([os.path.join(
-            get_package_share_directory('as2_platform_tello'), 'launch'),
-            '/tello_platform.launch.py']),
+            get_package_share_directory('as2_platform_pixhawk'), 'launch'),
+            '/pixhawk_launch.py']),
         launch_arguments={
             'namespace': LaunchConfiguration('namespace'),
-            'use_sim_time': LaunchConfiguration('sim_time'),
-            'simulation_config_file': sim_config + '/world.json',
+            'use_sim_time': 'false',
+            'simulation_config_file':  sim_config + '/world.json',
             'platform_config_file': sim_config + '/platform_config.yaml'
         }.items(),
     )
@@ -54,9 +65,9 @@ def generate_launch_description():
             '/state_estimator_launch.py']),
         launch_arguments={
             'namespace': LaunchConfiguration('namespace'),
-            'use_sim_time': LaunchConfiguration('sim_time'),
-            'plugin_name': 'ground_truth',
-            'plugin_config_file': sim_config + '/state_estimator_config.yaml'
+            'use_sim_time': 'false',
+            'plugin_name': 'raw_odometry',
+            'plugin_config_file': sim_config + '/state_estimator_odom.yaml'
         }.items(),
     )
     motion_controller = IncludeLaunchDescription(
@@ -65,10 +76,10 @@ def generate_launch_description():
             '/controller_launch.py']),
         launch_arguments={
             'namespace': LaunchConfiguration('namespace'),
-            'use_sim_time': LaunchConfiguration('sim_time'),
+            'use_sim_time': 'false',
             'motion_controller_config_file': sim_config + '/motion_controller.yaml',
             'plugin_name': 'pid_speed_controller',
-            'plugin_config_file': sim_config + '/motion_pid.yaml'
+            'plugin_config_file': sim_config + '/pid_speed_controller.yaml'
         }.items(),
     )
     behaviors = IncludeLaunchDescription(
@@ -77,13 +88,13 @@ def generate_launch_description():
             '/motion_behaviors_launch.py']),
         launch_arguments={
             'namespace': LaunchConfiguration('namespace'),
-            'use_sim_time': LaunchConfiguration('sim_time'),
+            'use_sim_time': 'false',
             'takeoff_plugin_name': 'takeoff_plugin_position',
             'go_to_plugin_name': 'go_to_plugin_position',
             'follow_path_plugin_name': 'follow_path_plugin_position',
             'land_plugin_name': 'land_plugin_speed'
-        }.items()
-    )    
+        }.items(),
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument('namespace', default_value='drone0',
@@ -95,6 +106,7 @@ def generate_launch_description():
         drone_spawner,
         
         # Aerostack2:
+        micro_xrce,
         aerial_platform,
         state_estimator,
         motion_controller,

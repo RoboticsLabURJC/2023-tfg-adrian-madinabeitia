@@ -1,9 +1,9 @@
 {
-    "world_name": "empty",
+    "world": "empty",
     "drones": [
         {
-            "model_type": "quadrotor_base",
-            "model_name": "drone0"
+            "model": "iris_dual_camera",
+            "pose": [ 0.0, 0.0, 1.4, 0.0]
         }
     ]
 }
