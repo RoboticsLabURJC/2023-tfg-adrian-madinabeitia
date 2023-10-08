@@ -5,10 +5,8 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-
 # Find packages
 find_package(ament_cmake REQUIRED)
-#find_package(gazebo REQUIRED)  # Note uppercase variables in /usr/lib/x86_64-linux-gnu/cmake/gazebo/gazebo-config.cmake
 find_package(gazebo_dev REQUIRED)
 find_package(gazebo_ros REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -40,6 +38,7 @@ ament_target_dependencies(
   gazebo_dev
   gazebo_ros
   geometry_msgs
+  sensor_msgs
   rclcpp
   std_msgs
   tello_msgs
@@ -59,15 +58,19 @@ install(
 
 ## Install Python scripts
 install(
+  PROGRAMS src/carControl.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+install(
   PROGRAMS src/inject_entity.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
 
 ## Install world and launch files
 install(
   DIRECTORY launch worlds urdf config models
   DESTINATION share/${PROJECT_NAME}
 )
-
 
 ament_package()
