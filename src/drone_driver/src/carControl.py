@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+## Links used
+# https://github.com/ros2/rosbag2
+# https://pytorch.org/tutorials/beginner/introyt/trainingyt.html
+
 import rclpy
 from rclpy.node import Node
 
@@ -42,28 +46,6 @@ RADIUS = 2
 
 # Distance to search the red line end
 LIMIT_UMBRAL = 15
-
-def farest_point(image):
-    img_width = image.shape[1]
-    height_mid = int(image.shape[0] / 2)
-        
-    x = 0
-    y = 0
-    count = 0
-        
-    for row in range (height_mid, height_mid + LIMIT_UMBRAL):
-        for col in range (img_width):
-                
-            comparison = image[row][col] == np.array([0, 0, 0])
-            if not comparison.all():
-                y += row
-                x += col 
-                count += 1
-        
-    if (count == 0):
-        return (0, 0)
-
-    return [int(x / count), int(y / count)]
 
 class  PID:
     def __init__(self, min, max):
@@ -110,13 +92,15 @@ class  PID:
             
         return out 
 
-class MinimalPublisher(Node):
+class carController(Node):
 
     def __init__(self):
         super().__init__('f1_line_follow')
         self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.filteredPublisher_ = self.create_publisher(Image, '/filtered_img', 100)
 
         self.imageSubscription = self.create_subscription(Image, '/cam_f1_left/image_raw', self.listener_callback, 10)
+        
 
 
         self.angular_pid = PID(-MAX_ANGULAR, MAX_ANGULAR)
@@ -133,58 +117,87 @@ class MinimalPublisher(Node):
         self.timer = self.create_timer(timer_period, self.timer_callback)
         self.i = 0
         self.filteredImage = None
-    
+
+    def farest_point(self, image):
+        img_width = image.shape[1]
+        height_mid = int(image.shape[0] / 2)
+            
+        x = 0
+        y = 0
+        count = 0
+            
+        for row in range (height_mid, height_mid + LIMIT_UMBRAL):
+            for col in range (img_width):
+                    
+                comparison = image[row][col] == np.array([0, 0, 0])
+                if not comparison.all():
+                    y += row
+                    x += col 
+                    count += 1
+            
+        if (count == 0):
+            return (0, 0)
+
+        return [int(x / count), int(y / count)]
+
+    def draw_traces(self, image):
+        img_width = image.shape[1]
+        img_height = image.shape[0]
+            
+        for row_index in range(img_height):
+            image[row_index][int(img_width / 2)] = np.array(TRACE_COLOR)
+        
     def listener_callback(self, msg):
 
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-        
+            
         # Apply a red filter to the image
         red_lower = np.array([0, 0, 100])  
         red_upper = np.array([100, 100, 255]) 
         red_mask = cv2.inRange(cv_image, red_lower, red_upper)
         self.filteredImage = cv2.bitwise_and(cv_image, cv_image, mask=red_mask)
     
-
-    def draw_traces(image):
-        img_width = image.shape[1]
-        img_height = image.shape[0]
-        
-        for row_index in range(img_height):
-            image[row_index][int(img_width / 2)] = np.array(TRACE_COLOR)
     
     def timer_callback(self):
-        width_center = self.filteredImage.shape[1] / 2
-        red_farest = farest_point(self.filteredImage)
+        if np.any(self.filteredImage):
+            width_center = self.filteredImage.shape[1] / 2
+            red_farest = self.farest_point(self.filteredImage)
 
-        # Comentar pruebas en linea recta y robustez añadida al programa
-        if red_farest[0] != 0 or red_farest[1] != 0:
-            
-            distance = width_center - red_farest[0]
-            # Pixel distance to angular vel transformation
-            angular = (((distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
-            angular_vel = self.angular_pid.get_pid(angular)
+            # Comentar pruebas en linea recta y robustez añadida al programa
+            if red_farest[0] != 0 or red_farest[1] != 0:
+                
+                distance = width_center - red_farest[0]
+                # Pixel distance to angular vel transformation
+                angular = (((distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
+                angular_vel = self.angular_pid.get_pid(angular)
 
-            # Inverse of angular vel and we convert it to linear velocity
-            angular_inv = MAX_ANGULAR - abs(angular_vel)    # 0 - MAX_ANGULAR
-            linear = (((angular_inv) * self.lin_rang) / MAX_ANGULAR) + MIN_LINEAR
-            linear_vel = self.linear_pid.get_pid(linear)
-            
-            vel_msg = Twist()
-            vel_msg.linear.x = float(linear_vel)
-            vel_msg.linear.y = 0.0
-            vel_msg.linear.z = 0.0
-            vel_msg.angular.x = 0.0
-            vel_msg.angular.y = 0.0
-            vel_msg.angular.z = float(angular_vel)
+                # Inverse of angular vel and we convert it to linear velocity
+                angular_inv = MAX_ANGULAR - abs(angular_vel)    # 0 - MAX_ANGULAR
+                linear = (((angular_inv) * self.lin_rang) / MAX_ANGULAR) + MIN_LINEAR
+                linear_vel = self.linear_pid.get_pid(linear)
+                
+                vel_msg = Twist()
+                vel_msg.linear.x = float(linear_vel)
+                vel_msg.linear.y = 0.0
+                vel_msg.linear.z = 0.0
+                vel_msg.angular.x = 0.0
+                vel_msg.angular.y = 0.0
+                vel_msg.angular.z = float(angular_vel)
 
-            self.publisher_.publish(vel_msg)
+                self.publisher_.publish(vel_msg)
 
-        # Traces and draw image
-        cv2.circle(self.filteredImage, red_farest, RADIUS, TRACE_COLOR, RADIUS)
 
-        cv2.imshow("Filtered image", self.filteredImage)
-        cv2.waitKey(1)
+                img = CvBridge().cv2_to_imgmsg(self.filteredImage, "bgr8")
+                img.header.frame_id = "your_frame_id"  # Set the frame ID here
+                self.filteredPublisher_.publish(img)
+
+            # Traces and draw image
+            self.draw_traces(self.filteredImage)
+            cv2.circle(self.filteredImage, red_farest, RADIUS, TRACE_COLOR, RADIUS)
+
+            cv2.imshow("Filtered image", self.filteredImage)
+            cv2.waitKey(1)
 
 
 
@@ -192,7 +205,7 @@ class MinimalPublisher(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    minimal_publisher = MinimalPublisher()
+    minimal_publisher = carController()
 
     rclpy.spin(minimal_publisher)
 
