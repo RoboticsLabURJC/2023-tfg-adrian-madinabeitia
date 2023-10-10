@@ -21,7 +21,7 @@ def generate_launch_description():
             'world': world_path,
             'namespace': LaunchConfiguration('namespace'),
             'use_sim_time': LaunchConfiguration('sim_time'),
-            #'simulation_config_file': sim_config + '/world.json'
+            'simulation_config_file': sim_config + '/world.json'
         }.items(),
     )
 
@@ -30,7 +30,7 @@ def generate_launch_description():
         executable='spawn_entity.py',
         output='screen',
         arguments=[
-            '-entity', LaunchConfiguration('namespace'),  # Add your desired namespace here
+            '-entity', LaunchConfiguration('namespace'), 
             '-file', sdf_path,
             '-x', '0',
             '-y', '0',

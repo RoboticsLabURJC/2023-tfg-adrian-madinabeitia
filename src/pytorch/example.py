@@ -18,30 +18,50 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 
-def get_img(ros2_messages, topic):
+from sensor_msgs.msg import Image
+from cv_bridge import CvBridge
+import cv2
+
+def get_img(rosbag_dir, topic):
     imgs = []
+    with ROS2Reader(rosbag_dir) as ros2_reader:
         
-    for m, msg in enumerate(ros2_messages):
-        (connection, timestamp, rawdata) = msg
-            
-        if (connection.topic == topic):
-            data = deserialize_cdr(rawdata, connection.msgtype)
-            imgs.append(data.data)
+        channels = 3 # Encoding = bgr8
+        ros2_conns = [x for x in ros2_reader.connections]
+        ros2_messages = ros2_reader.messages(connections=ros2_conns)      
+
+        for m, msg in enumerate(ros2_messages):
+            (connection, timestamp, rawdata) = msg
+                
+            if (connection.topic == topic):
+                data = deserialize_cdr(rawdata, connection.msgtype)
+
+                # Saves the image in a readable format
+                img = np.array(data.data, dtype=data.data.dtype)
+                resizeImg = img.reshape((data.height, data.width, channels))
+                imgs.append(resizeImg)
+
+                # # To save the raw data
+                # imgs.append(data.data)
     
     return imgs
 
-def get_vel(ros2_messages, topic):
+def get_vel(rosbag_dir, topic):
     vel = []
 
+    with ROS2Reader(rosbag_dir) as ros2_reader:
+
+        ros2_conns = [x for x in ros2_reader.connections]
+        ros2_messages = ros2_reader.messages(connections=ros2_conns)
         
-    for m, msg in enumerate(ros2_messages):
-        (connection, timestamp, rawdata) = msg
-            
-        if (connection.topic == topic):
-            data = deserialize_cdr(rawdata, connection.msgtype)
-            linear = data.linear.x
-            angular = data.angular.z
-            vel.append([linear, angular])
+        for m, msg in enumerate(ros2_messages):
+            (connection, timestamp, rawdata) = msg
+                
+            if (connection.topic == topic):
+                data = deserialize_cdr(rawdata, connection.msgtype)
+                linear = data.linear.x
+                angular = data.angular.z
+                vel.append([linear, angular])
     
     return vel
 
@@ -54,6 +74,12 @@ def train(vel_data, img_data):
     training_loader = torch.utils.data.DataLoader(img_data, batch_size=4, shuffle=True)
     print('Training set has {} instances'.format(len(img_data)))
 
+def showData(img, vel):
+    print(vel)
+    # Display the image
+    cv2.imshow("Image", img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
     
 
 def main():
@@ -61,20 +87,14 @@ def main():
     # input will be the folder containing the .db3 and metadata.yml file
     parser.add_argument('--input','-i',type=str, help='rosbag input location')
     
-
     args = parser.parse_args()
     rosbag_dir = args.input
-    with ROS2Reader(rosbag_dir) as ros2_reader:
 
-        ros2_conns = [x for x in ros2_reader.connections]
-        ros2_messages = ros2_reader.messages(connections=ros2_conns)
+    vel_data = get_vel(rosbag_dir, "/cmd_vel")
+    img_data = get_img(rosbag_dir, "/filtered_img")
 
-        vel_data = get_vel(ros2_messages, "/cmd_vel")
-        img_data = get_img(ros2_messages, "/filtered_img")
+    showData(img_data[50], vel_data[50])
 
-    print(vel_data)
-    train(vel_data, img_data)
-    
 
 if __name__ == "__main__":
     main()

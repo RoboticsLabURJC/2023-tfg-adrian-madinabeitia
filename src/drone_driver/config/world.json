@@ -1,8 +1,9 @@
 {
-    "world": "empty",
+    "world": "ocean_simulation",
     "drones": [
         {
             "model": "iris_dual_camera",
+            "name": "drone0",
             "pose": [ 0.0, 0.0, 1.4, 0.0]
         }
     ]

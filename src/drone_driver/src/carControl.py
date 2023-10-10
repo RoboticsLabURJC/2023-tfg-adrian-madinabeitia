@@ -101,8 +101,6 @@ class carController(Node):
 
         self.imageSubscription = self.create_subscription(Image, '/cam_f1_left/image_raw', self.listener_callback, 10)
         
-
-
         self.angular_pid = PID(-MAX_ANGULAR, MAX_ANGULAR)
         self.angular_pid.set_pid(ANG_KP, ANG_KD, ANG_KI)
 
