@@ -106,7 +106,7 @@ def generate_launch_description():
         drone_spawner,
         
         # Aerostack2:
-        micro_xrce,
+        #micro_xrce,
         aerial_platform,
         state_estimator,
         motion_controller,
