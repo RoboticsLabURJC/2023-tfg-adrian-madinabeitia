@@ -1,10 +1,14 @@
 {
-    "world": "ocean_simulation",
+    "world": "/home/adrian/workspace/install/drone_driver/share/drone_driver/worlds/ocean_simulation.world",
     "drones": [
         {
-            "model": "iris_dual_camera",
-            "name": "drone0",
-            "pose": [ 0.0, 0.0, 1.4, 0.0]
+            "model": "iris_dual_cam",
+            "pose": [
+                0.0,
+                0.0,
+                1.4,
+                0.0
+            ]
         }
     ]
 }

@@ -5,4 +5,3 @@
     odom_frame_id: "odom"
     base_frame_id: "base_link"
     use_bypass: true
-    tf_timeout_threshold: 30.0
