@@ -45,6 +45,11 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(
+  PROGRAMS src/image_filter_node.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ## Install world and launch files
 install(
   DIRECTORY launch worlds config models

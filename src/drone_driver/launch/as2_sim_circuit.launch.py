@@ -1,14 +1,17 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess, LogInfo
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 namespace= "drone0"
 sim_time = "true"
 world = "/simple_circuit.world"
+
+env_vars = {
+    'AEROSTACK2_SIMULATION_DRONE_ID': namespace
+}
 
 def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
@@ -22,6 +25,7 @@ def generate_launch_description():
             f'$AS2_GZ_ASSETS_SCRIPT_PATH/default_run.sh {sim_config}/world.json'
         ],
         name="gazebo",
+        additional_env=env_vars
     )
 
     # Prepares the tmux session
@@ -48,7 +52,7 @@ def generate_launch_description():
         arguments=[
             sim_config + '/world.json',
             worlds_dir + world,
-            '53.462', '-10.734', '0.004', '-1.57'  # Drone coordinates
+            '53.462', '-10.734', '0.004', '-1.6'  # Drone coordinates
         ],
     )  
 

@@ -6,6 +6,7 @@ import rclpy
 from as2_python_api.drone_interface import DroneInterface
 from as2_msgs.msg._platform_status import PlatformStatus
 
+
 def retry_command(command, check_func, sleep_time=1.0, max_retries=10):
     while not check_func():
         command()
@@ -71,20 +72,11 @@ def drone_run(drone_interface: DroneInterface):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(
-        description="Starts gates mission for crazyswarm in either simulation or real environment")
-    
-    parser.add_argument('-n', '--namespace', default='drone0')
-
-    parser.add_argument('-v', '--verbose',
-                        action='store_true', default=False)
-
-    args = parser.parse_args()
     rclpy.init()
 
-    uav = DroneInterface(drone_id=args.namespace, verbose=args.verbose,
+    uav = DroneInterface(drone_id="drone0", verbose=False,
                          use_sim_time=True)
-
+    
     drone_run(uav)
 
     uav.shutdown()

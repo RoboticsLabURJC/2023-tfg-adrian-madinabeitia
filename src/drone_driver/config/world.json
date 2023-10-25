@@ -1,13 +1,14 @@
 {
-    "world": "/home/adrian/workspace/install/drone_driver/share/drone_driver/worlds/simple_circuit.world",
+    "world": "/home/adrian/workspace/install/drone_driver/share/drone_driver/worlds/ocean.world",
     "drones": [
         {
             "model": "iris_dual_cam",
+            "name:": "drone0",
             "pose": [
-                53.462,
-                -10.734,
-                0.004,
-                -1.75
+                0.0,
+                0.0,
+                1.4,
+                0.0
             ]
         }
     ]
