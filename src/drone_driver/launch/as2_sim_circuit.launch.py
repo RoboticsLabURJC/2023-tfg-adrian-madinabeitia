@@ -21,7 +21,6 @@ def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
     worlds_dir = os.path.join(get_package_share_directory('drone_driver'), 'worlds')
     utils_path = os.path.join(get_package_share_directory('drone_driver'), 'utils')
-    tmux_yml = os.path.join(get_package_share_directory('drone_driver'), 'config/tmuxLaunch.yml')
 
     # Px4 autopilot gazebo launch
     gazeboPx4 = ExecuteProcess(
@@ -44,7 +43,7 @@ def generate_launch_description():
 
     # Prepares the tmux session
     tmuxLauncher = ExecuteProcess(
-        cmd=['tmuxinator', 'start', '-n', namespace, '-p', tmux_yml, 
+        cmd=['tmuxinator', 'start', '-n', namespace, '-p', sim_config + '/tmuxLaunch.yml', 
              "drone_namespace=" + namespace, 
              "simulation_time=" + sim_time,
              "config_path=" + sim_config],
