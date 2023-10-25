@@ -43,7 +43,7 @@ dataset_transforms = transforms.Compose([
 
 
 def train(model: pilotNet, optimizer: optim.Optimizer):
-    quit = False
+    # quit = False
 
     # def on_quit():
     #     nonlocal quit

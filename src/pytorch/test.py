@@ -9,14 +9,12 @@ import numpy as np
 dataset = rosbagDataset(DATA_PATH, dataset_transforms)
 train_loader = DataLoader(dataset)
 
-quit = False
+# quit = False
 
 
-def on_quit():
-    global quit
-    quit = True
-
-
+# def on_quit():
+#     global quit
+#     quit = True
 
 model = pilotNet()
 load_checkpoint(model)
@@ -25,8 +23,8 @@ device = torch.device("cuda:0")
 model.to(device)
 
 for i, data in enumerate(train_loader, 0):
-    if quit:
-        break
+    # if quit:
+    #     break
 
     label, image = data
 
