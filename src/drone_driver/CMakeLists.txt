@@ -52,7 +52,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds config models
+  DIRECTORY launch worlds config models utils
   DESTINATION share/${PROJECT_NAME}
 )
 
