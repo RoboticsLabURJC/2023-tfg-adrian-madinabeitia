@@ -1,19 +1,35 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess, LogInfo
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 namespace= "drone0"
 sim_time = "true"
+world = "/ocean.world"
 
 def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
-    worlds = os.path.join(get_package_share_directory('drone_driver'), 'worlds')
+    worlds_dir = os.path.join(get_package_share_directory('drone_driver'), 'worlds')
     tmux_yml = os.path.join(get_package_share_directory('drone_driver'), 'config/tmuxLaunch.yml')
 
+    # # Default gazebo launch 
+
+    # gazebo = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource([os.path.join(
+    #         get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
+
+    #     launch_arguments={
+    #         'world': worlds + 'ocean_simulation.world',
+    #         'namespace': LaunchConfiguration('namespace'),
+    #         'use_sim_time': LaunchConfiguration('sim_time'),
+    #         'simulation_config_file': sim_config + '/world.json'
+    #     }.items(),
+    # )
+
+    # Px4 autopilot gazebo launch
     gazeboPx4 = ExecuteProcess(
         cmd=[
             '/bin/bash', '-c',
@@ -22,6 +38,7 @@ def generate_launch_description():
         name="gazebo",
     )
 
+    # Prepares the tmux session
     tmuxLauncher = ExecuteProcess(
         cmd=['tmuxinator', 'start', '-n', namespace, '-p', tmux_yml, 
              "drone_namespace=" + namespace, 
@@ -38,20 +55,19 @@ def generate_launch_description():
     )
 
 
-    set_world_path_process = ExecuteProcess(
-        cmd=[
-            '/usr/bin/env', 'python3',
-            sim_config + '/parse.py',
-            sim_config + '/world.json',
-            worlds + '/ocean_simulation.world'
-        ],
-        name='set_world_path_process',
+    parseYaml = Node(
+        package='drone_driver',
+        executable='parseWorld.py',
         output='screen',
-        additional_env={'WORLD_PATH': sim_config+ "world.json"},
+        arguments=[
+            sim_config + '/world.json',
+            worlds_dir + world,
+            '0.0', '0.0', '1.4', '0.0'  # Drone coordinates
+        ],
     )
 
     return LaunchDescription([
-        set_world_path_process,
+        parseYaml,
         gazeboPx4,
         tmuxLauncher,
         tmuxAttach,

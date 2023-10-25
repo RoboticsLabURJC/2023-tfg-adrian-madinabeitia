@@ -17,59 +17,37 @@ find_package(tello_msgs REQUIRED)
 
 # Local includes
 include_directories(
-  include
+ # include
   ${gazebo_ros_INCLUDE_DIRS}
   ${geometry_msgs_INCLUDE_DIRS}
   ${std_msgs_INCLUDE_DIRS}
   ${tello_msgs_INCLUDE_DIRS}
 )
 
-#=============
-# Tello Gazebo plugin
-#=============
-
-add_library(
-  TelloPlugin SHARED
-  src/basic_plugin.cpp
-)
-
-ament_target_dependencies(
-  TelloPlugin
-  gazebo_dev
-  gazebo_ros
-  geometry_msgs
-  sensor_msgs
-  rclcpp
-  std_msgs
-  tello_msgs
-)
 
 #=============
 # Install
 #=============
-
-# Install targets
-install(
-  TARGETS TelloPlugin
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  RUNTIME DESTINATION bin
-)
 
 ## Install Python scripts
 install(
   PROGRAMS src/carControl.py
   DESTINATION lib/${PROJECT_NAME}
 )
+
 install(
-  PROGRAMS src/inject_entity.py
+  PROGRAMS src/parseWorld.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(
+  PROGRAMS src/drone_controller.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds urdf config models
+  DIRECTORY launch worlds config models
   DESTINATION share/${PROJECT_NAME}
 )
 
