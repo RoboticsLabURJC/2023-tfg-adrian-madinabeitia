@@ -34,10 +34,9 @@ class droneController(Node):
 
     def __init__(self):
         super().__init__('drone_line_follow')
-        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
         self.filteredPublisher_ = self.create_publisher(Image, '/filtered_img', 100)
 
-        self.imageSubscription = self.create_subscription(Image, '/drone0/sensor_measurements/frontal_camera/image_raw', self.listener_callback, 10)
+        self.imageSubscription = self.create_subscription(Image, '/cam_f1_left/image_raw', self.listener_callback, 10)
 
         self.px_rang = MAX_PIXEL - MIN_PIXEL
 
@@ -83,6 +82,9 @@ class droneController(Node):
 
         cv2.imshow("img", self.filteredImage)
         cv2.waitKey(1) 
+
+        msg = bridge.cv2_to_imgmsg(self.filteredImage, encoding="bgr8")
+        self.filteredPublisher_.publish(msg)
 
 
 

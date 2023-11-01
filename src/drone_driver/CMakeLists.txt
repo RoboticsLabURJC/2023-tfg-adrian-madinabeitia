@@ -31,7 +31,12 @@ include_directories(
 
 ## Install Python scripts
 install(
-  PROGRAMS src/carControl.py
+  PROGRAMS src/carExpertPilot.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  PROGRAMS src/carNeuralPilot.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -52,8 +57,10 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds config models utils
+  DIRECTORY launch worlds config models utils include
   DESTINATION share/${PROJECT_NAME}
 )
+
+
 
 ament_package()
