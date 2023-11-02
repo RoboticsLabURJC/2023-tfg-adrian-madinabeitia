@@ -25,6 +25,6 @@ def generate_launch_description():
     )  
 
     return LaunchDescription([
-        control,
         filterImage,
+        control,
     ])

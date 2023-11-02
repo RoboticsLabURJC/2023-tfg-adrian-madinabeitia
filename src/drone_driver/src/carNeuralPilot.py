@@ -23,11 +23,9 @@ from data import dataset_transforms
 
 
 # Limit velocitys
-MAX_ANGULAR = 4.5 # 5 Nürburgring line
-MAX_LINEAR = 9 # 12 in some maps be fast
+MAX_ANGULAR = 4.5 
+MAX_LINEAR = 9 
 MIN_LINEAR = 1
-
-
 
 class carController(Node):
 
@@ -46,8 +44,6 @@ class carController(Node):
         self.model.to(self.device)
 
 
-
-        
     def listener_callback(self, msg):
         bridge = CvBridge()
         self.img = bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -58,7 +54,7 @@ class carController(Node):
         with torch.no_grad():
             predictions = self.model(img_tensor)
 
-        # Veloxity set
+        # Velocity set
         vel = predictions[0].tolist()
         vel_msg = Twist()
         vel_msg.linear.x = float(vel[0])

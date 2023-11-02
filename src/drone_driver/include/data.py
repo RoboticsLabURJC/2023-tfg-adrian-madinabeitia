@@ -8,27 +8,16 @@
 from rosbags.rosbag2 import Reader as ROS2Reader
 from rosbags.serde import deserialize_cdr
 import matplotlib.pyplot as plt
-
-import argparse
 import torch
-import torchvision
 import torchvision.transforms as transforms
 
-# PyTorch TensorBoard support
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-
 import matplotlib.pyplot as plt
 import numpy as np
-
-from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
-import cv2
-import math
 import torch
 from torch.utils.data import random_split, Dataset
-import random
-from collections import defaultdict
+
 
 DATA_PATH = "../../rosbagsCar/datasetBag"
 LOWER_LIMIT = 0
@@ -41,11 +30,12 @@ class rosbagDataset(Dataset):
         self.imgData = self.get_img(main_dir, "/cam_f1_left/image_raw")
         self.velData = self.get_vel(main_dir, "/cmd_vel")
 
+        self.curveLimit = 0.5
         self.dataset = self.get_dataset()
+       
 
     def get_dataset(self):
-
-        return self.balanceData()
+        return self.balanceData(self.curveLimit)
 
     def get_img(self, rosbag_dir, topic):
         imgs = []
@@ -91,54 +81,39 @@ class rosbagDataset(Dataset):
     def __len__(self):
         return len(self.velData)
 
-    def __getitem__(self, index):
+    def __getitem__(self, item):
         device = torch.device("cuda:0")
-        image_tensor = self.transform(self.dataset[index][0]).to(device)
-        vel_tensor = torch.tensor(self.dataset[index][1]).to(device)
+        image_tensor = self.transform(self.dataset[item][0]).to(device)
+        vel_tensor = torch.tensor(self.dataset[item][1]).to(device)
 
         return (vel_tensor, image_tensor)
 
+    def balanceData(self, angular_lim):
+        curve_multiplier = 1
 
-
-    def balanceData(self):
         angular_velocities = [vel[1] for vel in self.velData]
-        velocidades_lineales = [vel[0] for vel in self.velData]
 
-        muestras_rectas = [index for index, velocidad in enumerate(angular_velocities) if abs(velocidad) <= 0.8 and abs(velocidades_lineales[index]) <= 4.5]
-        muestras_curvas = [index for index, velocidad in enumerate(angular_velocities) if abs(velocidad) > 1]
-
-        # Determina el número de muestras que deseas en la curva (4 veces más que la recta)
-        num_muestras_curvas_deseado = 1000 * len(muestras_rectas)
+        straight_smaple = [index for index, vel in enumerate(angular_velocities) if abs(vel) <= angular_lim]
+        curve_sample = [index for index, vel in enumerate(angular_velocities) if abs(vel) > angular_lim]
         
-        # Muestrea las muestras de recta y curva ajustando las probabilidades
-        muestras_rectas_balanceadas = np.random.choice(muestras_rectas, num_muestras_curvas_deseado, replace=True)
-        muestras_curvas_balanceadas = np.random.choice(muestras_curvas, num_muestras_curvas_deseado, replace=True)
+        # Balances the numumber of curves in the dataset
+        curve_aument = int(1 / (len(curve_sample) / len(self.velData)))
+        n_curve = curve_multiplier * curve_aument   # Inreases the curve samples
 
-        n = 5
-        index_balanceado = np.concatenate([muestras_curvas_balanceadas] * n + [muestras_rectas_balanceadas])
+        balanced_index = np.concatenate([curve_sample] * n_curve + [straight_smaple])
+        balanced_dataset = [(self.imgData[i], self.velData[i]) for i in balanced_index]
 
-        dataset_balanceado = [(self.imgData[i], self.velData[i]) for i in index_balanceado]
-
-        return dataset_balanceado
+        return balanced_dataset
 
 
 
 
 def plotContinuousGraphic(label, vels, color, subplot):
     plt.subplot(2, 1, subplot)
-    plt.plot(vels, label=label, linestyle='-', markersize=3, color=color)
-    plt.xlabel('Muestras')
-    plt.ylabel('Velocidad ' + label)
-    plt.title("Velocidad " + label + " Continua")
-
-
-def calculatePercentageInRange(vel, lower_limit, upper_limit):
-    count_in_range = sum(1 for vel in vel if lower_limit <= vel <= upper_limit)
-    total_measurements = len(vel)
-    
-    percentage = (count_in_range / total_measurements) * 100
-    
-    return percentage
+    plt.plot(vels, label=label, linestyle=' ', marker='o', markersize=3, color=color)
+    plt.xlabel('Sample')
+    plt.ylabel('vel ' + label)
+    plt.title("vel " + label)
 
 
 
@@ -149,18 +124,15 @@ dataset_transforms = transforms.Compose([
 
 
 #################################################################
-# Data analysis for training
+# Data analysis for training                                    #
 #################################################################
 
 
 def main():
-    LOWER_LIMIT = -0.25
-    UPPER_LIMIT = 0.25
-
+    D = 2  # Decimals to show in the traces
     dataset = rosbagDataset(DATA_PATH, dataset_transforms)
 
     vels = [velocitys for image, velocitys in dataset.dataset]
-
     linear_velocities = [vel[0] for vel in vels]
     angular_velocities = [vel[1] for vel in vels]
 
@@ -170,11 +142,11 @@ def main():
     plotContinuousGraphic("lineal", linear_velocities, 'b', 1)
     plotContinuousGraphic("angular", angular_velocities, 'g', 2)
     
-    angularPerCent = calculatePercentageInRange(angular_velocities, LOWER_LIMIT, UPPER_LIMIT)
-    linear_velocities = calculatePercentageInRange(linear_velocities, LOWER_LIMIT*4, UPPER_LIMIT*4)
+    straight_smaples = [index for index, velocidad in enumerate(angular_velocities) if abs(velocidad) <= dataset.curveLimit]
+    percentage = len(straight_smaples)/len(linear_velocities) * 1
 
-    print(f"* Angular = 0 values => {round(angularPerCent, 2)}%")
-    print(f"* Linear  = 0 values => {round(linear_velocities, 2)}%")
+    print(f"* Linear  samples => {round(percentage * 100, D)}%, mean = {round(np.mean(linear_velocities), D)}")
+    print(f"* Curve samples => {round((1 - percentage) * 100, D)}%, mean = {round(np.mean(angular_velocities), D)}")
 
     plt.tight_layout()
     plt.show()

@@ -18,7 +18,7 @@ class droneController(DroneInterface):
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
 
 
-    def retry_command(self, command, check_func, sleep_time=1.0, max_retries=10):
+    def retry_command(self, command, check_func, sleep_time=1.0, max_retries=4):
         if not check_func():
             command()
             count = 0
@@ -76,7 +76,7 @@ class droneController(DroneInterface):
         print(self.orientation)
         self.take_off_process(takeoff_height)
 
-        self.set_vel(0, vel, 0, 0)
+        self.set_vel(vel, 0, 0, 0)
         sleep(time_sleep)
 
         self.set_vel(0, 0, 0, 0.0)
@@ -131,7 +131,7 @@ if __name__ == '__main__':
     drone = droneController(drone_id="drone0", verbose=False,
                          use_sim_time=True)
     
-    drone.exampleMission()
+    drone.velocityControl()
 
     drone.shutdown()
     rclpy.shutdown()
