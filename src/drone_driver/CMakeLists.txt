@@ -46,7 +46,7 @@ install(
 )
 
 install(
-  PROGRAMS src/drone_controller.py
+  PROGRAMS src/droneExpertPilot.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

@@ -1,9 +1,9 @@
 <?xml version="1.0" ?>
 <sdf version="1.6">
   <world name="default">
-    <gui fullscreen=1>
+    <gui fullscreen=0>   <!-- 1 for full screen -->
       <camera name='user_camera'>
-        <pose >54.53 -6.12 1.35 0 0.31 -1.92</pose>
+        <pose >-8 -6 6.0 0 0.56 0.64</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>
@@ -23,9 +23,10 @@
       <name>sun_1</name>
       <pose>0 0 1 0 0 0</pose>
     </include>
+
     <include>
 	    <uri>model://simple_circuit</uri>
-	    <pose>0 0 0 0 0 0</pose>
+	    <pose>10.235 53.47 0 0 0 -1.58</pose>
     </include>
 
     <!-- Gazebo required specifications -->

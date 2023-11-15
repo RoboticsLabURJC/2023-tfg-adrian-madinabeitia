@@ -20,7 +20,7 @@ def generate_launch_description():
 
     control = Node(
         package='drone_driver',
-        executable='drone_controller.py',
+        executable='droneExpertPilot.py',
         output='screen'
     )  
 
