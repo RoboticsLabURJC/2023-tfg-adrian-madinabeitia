@@ -77,10 +77,10 @@ class droneController(DroneInterface):
             red_farest = band_midpoint(cv_image, top_point, top_point + LIMIT_UMBRAL)
             red_nearest = band_midpoint(cv_image, bottom_point-LIMIT_UMBRAL*2, bottom_point)
                 
-            distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
+            angular_distance = (width_center - red_farest[0])#*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
 
             # Pixel distance to angular vel transformation
-            angular = (((distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
+            angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
             self.anguarVel = self.angular_pid.get_pid(angular)
             # self.draw_traces(cv_image)
 
