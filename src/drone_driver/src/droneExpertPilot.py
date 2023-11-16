@@ -32,8 +32,8 @@ MAX_LINEAR = 2
 MAX_Z = 2
 
 ## PID controlers
-ANG_KP = 0.8
-ANG_KD = 0.75
+ANG_KP = 0.0#0.8
+ANG_KD = 0.0#0.75
 ANG_KI = 0.0
 
 Z_KP = 0.8

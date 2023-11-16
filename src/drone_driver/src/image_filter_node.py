@@ -39,8 +39,8 @@ class droneController(Node):
 
     def __init__(self):
         super().__init__('drone_line_follow')
-        self.filteredPublisher_ = self.create_publisher(Image, '/filtered_img', 10)
-        self.imageSubscription = self.create_subscription(Image, '/drone0/sensor_measurements/frontal_camera/image_raw', self.listener_callback, 10)
+        self.filteredPublisher_ = self.create_publisher(Image, '/filtered_img', 1)
+        self.imageSubscription = self.create_subscription(Image, '/drone0/sensor_measurements/frontal_camera/image_raw', self.listener_callback, 1)
 
         self.px_rang = MAX_PIXEL - MIN_PIXEL
 
