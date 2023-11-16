@@ -2,10 +2,14 @@
 <sdf version="1.6">
   <world name="default">
     <gui fullscreen=0>   <!-- 1 for full screen -->
-      <camera name='user_camera'>
-        <pose >-8 -6 6.0 0 0.56 0.64</pose>
-        <view_controller>orbit</view_controller>
-        <projection_type>perspective</projection_type>
+     <camera name="user_camera">
+        <track_visual>
+          <name>iris_dual_cam_0</name>
+          <static>true</static>
+          <use_model_frame>true</use_model_frame>
+          <xyz>-6.0 0.00 3</xyz>
+          <inherit_yaw>true</inherit_yaw>
+        </track_visual>
       </camera>
     </gui>
     <scene>

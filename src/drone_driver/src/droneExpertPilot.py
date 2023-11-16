@@ -16,79 +16,29 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge
 
-from image_filter_node import band_midpoint, search_top_line
+from control_functions import PID, band_midpoint, search_top_line, search_bottom_line
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360
 
 # Image parameters
-LIMIT_UMBRAL = 20
-UPPER_PROPORTION = 0.4
-LOWER_PROPORTION = 0.6
+LIMIT_UMBRAL = 40
+UPPER_PROPORTION = 0.7
+LOWER_PROPORTION = 0.3
 
 # Vel control
 MAX_ANGULAR = 2
 MAX_LINEAR = 2
 MAX_Z = 2
 
-# PID controlers
+## PID controlers
 ANG_KP = 0.8
-ANG_KD = 1.0
+ANG_KD = 0.75
 ANG_KI = 0.0
 
 Z_KP = 0.8
 Z_KD = 0.4
 Z_KI = 0.0
-
-
-# Trace parameters
-TRACE_COLOR = [0, 255, 0]
-RADIUS = 2
-
-class  PID:
-    def __init__(self, min, max):
-        self.min = min
-        self.max = max
-
-        self.prev_error = 0
-        self.int_error = 0
-        # Angular values as default
-        self.KP = ANG_KP
-        self.KD = ANG_KD
-        self.KI = ANG_KI
-    
-    def set_pid(self, kp, kd, ki):
-        self.KP = kp
-        self.KD = kd
-        self.KI = ki
-    
-    def get_pid(self, vel):        
-        
-        if (vel <= self.min):
-            vel = self.min
-        if (vel >= self.max):
-            vel = self.max
-        
-        self.int_error = self.int_error + vel
-        dev_error = vel - self.prev_error
-        self.int_error += (self.int_error + vel) 
-        
-        # Controls de integral value
-        if (self.int_error > self.max):
-            self.int_error = self.max
-        if self.int_error < self.min:
-            self.int_error = self.min
-
-        self.prev_error = vel
-
-        out = self.KP * vel + self.KI * self.int_error + self.KD * dev_error
-        
-        if (out > self.max):
-            out = self.max
-        if out < self.min:
-            out = self.min
-            
-        return out 
 
 
 class droneController(DroneInterface):
@@ -97,8 +47,7 @@ class droneController(DroneInterface):
         super().__init__(drone_id, verbose, use_sim_time)
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
 
-        self.imageSubscription = self.create_subscription(Image, '/filtered_img', self.listener_callback, 10)
-        self.publisher = self.create_publisher(Float32, '/veloc', 10)
+        self.imageSubscription = self.create_subscription(Image, '/filtered_img', self.listener_callback, 1)
 
         # PIDs
         self.angular_pid = PID(-MAX_ANGULAR, MAX_ANGULAR)
@@ -117,15 +66,16 @@ class droneController(DroneInterface):
 
     def listener_callback(self, msg):
         bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8") 
+        cv_image = bridge.imgmsg_to_cv2(msg, "mono8") 
         img_height = cv_image.shape[0]
 
         if True:
             width_center = cv_image.shape[1] / 2
 
             top_point = search_top_line(cv_image)
+            bottom_point = search_bottom_line(cv_image)
             red_farest = band_midpoint(cv_image, top_point, top_point + LIMIT_UMBRAL)
-            red_nearest = band_midpoint(cv_image, img_height-LIMIT_UMBRAL, img_height)
+            red_nearest = band_midpoint(cv_image, bottom_point-LIMIT_UMBRAL*2, bottom_point)
                 
             distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
 
@@ -136,7 +86,6 @@ class droneController(DroneInterface):
 
 
     def retry_command(self, command, check_func, sleep_time=1.0, max_retries=1):
-    
         if not check_func():
             command()
             count = 0
@@ -165,7 +114,7 @@ class droneController(DroneInterface):
         print('Arm')
         self.retry_command(self.arm, lambda: self.info['armed'])
         print("Arm done")
- 
+
 
         ##### TAKE OFF #####
         print("Take Off")
@@ -178,16 +127,18 @@ class droneController(DroneInterface):
     
     def land_process(self, speed):
         print("Landing")
+
         self.land(speed=speed)
         print("Land done")
 
         self.disarm()
     
+
     def set_vel2D(self, vx, vy, pz, yaw):
         velX = vx * math.cos(self.orientation[2]) + vy * math.sin(self.orientation[2])
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
 
-        errorZ = pz - self.position[2]
+        errorZ = float(pz) - self.position[2]
         vz = self.z_pid.get_pid(errorZ)
 
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
@@ -206,15 +157,11 @@ class droneController(DroneInterface):
         if self.info['state'] == PlatformStatus.FLYING:
             # self.set_vel(self.linearVel, 0, 0, self.anguarVel)
             self.set_vel2D(self.linearVel, 0, height, self.anguarVel)
-
-            float_msg = Float32()
-            float_msg.data = self.anguarVel
-            self.publisher.publish(float_msg)
             
 
 if __name__ == '__main__':
 
-    height = 2
+    height = 0.5
 
     rclpy.init()
 
