@@ -9,6 +9,7 @@ from as2_msgs.msg._platform_status import PlatformStatus
 from as2_python_api.modules.motion_reference_handler_module import MotionReferenceHandlerModule
 from as2_motion_reference_handlers.speed_motion import SpeedMotion
 from geometry_msgs.msg import TwistStamped, PoseStamped
+import matplotlib.pyplot as plt
 from std_msgs.msg import Float32
 
 from sensor_msgs.msg import Image
@@ -32,8 +33,8 @@ MAX_LINEAR = 2
 MAX_Z = 2
 
 ## PID controlers
-ANG_KP = 0.0#0.8
-ANG_KD = 0.0#0.75
+ANG_KP = 0.5
+ANG_KD = 0.45
 ANG_KI = 0.0
 
 Z_KP = 0.8
@@ -62,6 +63,10 @@ class droneController(DroneInterface):
         self.linearVel = MAX_LINEAR
         self.anguarVel = 0   # Updates in the listener callback
 
+        # Frequency analysis 
+        self.image_timestamps = []
+        self.vel_timestamps = []
+
 
 
     def listener_callback(self, msg):
@@ -69,21 +74,21 @@ class droneController(DroneInterface):
         cv_image = bridge.imgmsg_to_cv2(msg, "mono8") 
         img_height = cv_image.shape[0]
 
-        if True:
-            width_center = cv_image.shape[1] / 2
+        width_center = cv_image.shape[1] / 2
 
-            top_point = search_top_line(cv_image)
-            bottom_point = search_bottom_line(cv_image)
-            red_farest = band_midpoint(cv_image, top_point, top_point + LIMIT_UMBRAL)
-            red_nearest = band_midpoint(cv_image, bottom_point-LIMIT_UMBRAL*2, bottom_point)
+        top_point = search_top_line(cv_image)
+        bottom_point = search_bottom_line(cv_image)
+        red_farest = band_midpoint(cv_image, top_point, top_point + LIMIT_UMBRAL)
+        red_nearest = band_midpoint(cv_image, bottom_point-LIMIT_UMBRAL*2, bottom_point)
                 
-            angular_distance = (width_center - red_farest[0])#*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
+        angular_distance = (width_center - red_farest[0])#*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
 
-            # Pixel distance to angular vel transformation
-            angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
-            self.anguarVel = self.angular_pid.get_pid(angular)
-            # self.draw_traces(cv_image)
+        # Pixel distance to angular vel transformation
+        angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
+        self.anguarVel = self.angular_pid.get_pid(angular)
 
+        # Frequency analysis 
+        self.image_timestamps.append(time.time())
 
     def retry_command(self, command, check_func, sleep_time=1.0, max_retries=1):
         if not check_func():
@@ -94,42 +99,40 @@ class droneController(DroneInterface):
                 return 
             
             while not check_func() or count < max_retries:
-                print("Retrying...")
+                self.get_logger().info("Retrying...")
                 time.sleep(sleep_time)
                 command()
                 count += 1
 
             if not check_func():
-                print("Command failed")
+                self.get_logger().info("Command failed")
     
 
     def take_off_process(self, takeoff_height):
-        print("Start mission")
+        self.get_logger().info("Start mission")
 
         ##### ARM OFFBOARD #####
-        print('Offboard')
+        self.get_logger().info('Offboard')
         self.retry_command(self.offboard, lambda: self.info['offboard'])
-        print("Offboard done")
 
-        print('Arm')
+        self.get_logger().info('Arm')
         self.retry_command(self.arm, lambda: self.info['armed'])
-        print("Arm done")
 
 
         ##### TAKE OFF #####
-        print("Take Off")
+        self.get_logger().info("Take Off")
         self.takeoff(takeoff_height, speed=1.0)
         while not self.info['state'] == PlatformStatus.FLYING:
             time.sleep(0.5)
 
-        print("Take Off done")
+        self.get_logger().info("Following line")
 
     
     def land_process(self, speed):
-        print("Landing")
+        self.get_logger().info("Landing")
 
         self.land(speed=speed)
-        print("Land done")
+        self.get_logger().info("Land done")
 
         self.disarm()
     
@@ -157,11 +160,13 @@ class droneController(DroneInterface):
         if self.info['state'] == PlatformStatus.FLYING:
             # self.set_vel(self.linearVel, 0, 0, self.anguarVel)
             self.set_vel2D(self.linearVel, 0, height, self.anguarVel)
-            
+
+            self.vel_timestamps.append(time.time())
+    
 
 if __name__ == '__main__':
 
-    height = 0.5
+    height = 2.0
 
     rclpy.init()
 
@@ -174,9 +179,14 @@ if __name__ == '__main__':
             time.sleep(0.01)
     
     except KeyboardInterrupt:
+
+        np.save("~/vel_timestamps.txt", drone.vel_timestamps)
+        np.save("~/sub_timestamps.txt", drone.image_timestamps)
+        drone.land()
+        
         print("Keyboard interrupt.")
 
-    drone.land()
+
     drone.destroy_node()
 
     try:
@@ -185,7 +195,7 @@ if __name__ == '__main__':
 
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
-
+    
     exit()
 
 

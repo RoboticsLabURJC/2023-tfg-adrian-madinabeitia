@@ -8,7 +8,11 @@ from launch_ros.actions import Node
 
 namespace= "drone0"
 sim_time = "true"
-world = "/simple_circuit.world"
+
+# world = "/nurburgring_line.world"
+# world = "/simple_circuit.world"
+# world = "/montmelo_line.world"
+world = "/montreal_line.world"
 
 env_vars = {
     'AEROSTACK2_SIMULATION_DRONE_ID': namespace

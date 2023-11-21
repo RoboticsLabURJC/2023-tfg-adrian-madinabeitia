@@ -33,9 +33,7 @@ TRACE_COLOR = [0, 255, 0]
 RADIUS = 2
 
 
-
-
-class droneController(Node):
+class imageFilterNode(Node):
 
     def __init__(self):
         super().__init__('drone_line_follow')
@@ -44,7 +42,7 @@ class droneController(Node):
 
         self.px_rang = MAX_PIXEL - MIN_PIXEL
 
-    def show_trace(self, rgb_image, original):
+    def show_trace(self, label1, label2, rgb_image, original):
         height, width, channels = rgb_image.shape
 
         top_point = search_top_line(rgb_image)
@@ -57,34 +55,79 @@ class droneController(Node):
         cv2.circle(rgb_image, red_farest, RADIUS, TRACE_COLOR, RADIUS)
         cv2.line(rgb_image, (width // 2, 0), (width // 2, height), (255, 0, 0), 1)
 
-        cv2.imshow("Dilated mask", rgb_image)
-        cv2.imshow("Original", original)
+        cv2.imshow(label1, rgb_image)
+        cv2.imshow(label2, original)
         cv2.waitKey(1)
 
-    def listener_callback(self, msg):
-        erosion_kernel = np.ones((1, 1), np.uint8)
-        dilate_kernel = np.ones((6, 6), np.uint8)
-        n_erosion = 1
-        n_dilatation = 1
-
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+    def color_filter(self, image):
 
         # Apply a red filter to the image
         red_lower = np.array([0, 0, 100])
         red_upper = np.array([50, 50, 255])
-        red_mask = cv2.inRange(cv_image, red_lower, red_upper)
-        
+        red_mask = cv2.inRange(image, red_lower, red_upper)
+
+        return red_mask
+
+    def image_aperture(self, mask):
+        erosion_kernel = np.ones((2, 2), np.uint8)
+        dilate_kernel = np.ones((7, 7), np.uint8)
+        n_erosion = 1
+        n_dilatation = 1
+
         # Perform aperture
-        eroded_mask = cv2.erode(red_mask, erosion_kernel, iterations=n_erosion)
+        eroded_mask = cv2.erode(mask, erosion_kernel, iterations=n_erosion)
         dilated_mask = cv2.dilate(eroded_mask, dilate_kernel, iterations=n_dilatation)
-        rgb_image = cv2.cvtColor(dilated_mask, cv2.COLOR_GRAY2RGB)
+
+        return dilated_mask
+    
+    def filter_contours(self, contours):
+        limit_area = 100
+        
+        # Filters small contours
+        big_contours = [contour for contour in contours if cv2.contourArea(contour) > limit_area]
+
+        if len(big_contours) != 0:
+            # Find the contour with the maximum area
+            max_contour = max(big_contours, key=cv2.contourArea)
+            return [max_contour]
+        else:
+            return None
+
+
+
+    def listener_callback(self, msg):
+
+
+        bridge = CvBridge()
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+
+        # Filters
+        red_mask = self.color_filter(cv_image)
+        img = self.image_aperture(red_mask)
+
+        contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        filtered_contours = self.filter_contours(contours)
+
+        # Draws the new image
+        mono_img = np.zeros_like(img)
+
+        if filtered_contours != None:
+            for contour in filtered_contours:
+                cv2.drawContours(mono_img, [contour], -1, 255, thickness=cv2.FILLED)
+
 
         # Publish the filtered image
-        msg = bridge.cv2_to_imgmsg(dilated_mask, encoding="mono8")
+        msg = bridge.cv2_to_imgmsg(img, encoding="mono8")
         self.filteredPublisher_.publish(msg)
         
-        self.show_trace(rgb_image, cv_image)
+
+        # Traces
+        # Create a binary mask to draw contours
+        rgb_image = cv2.cvtColor(mono_img, cv2.COLOR_GRAY2RGB)
+
+
+        # Display the image with contours
+        self.show_trace("Countors: ", "Original:", rgb_image, img)
 
 
 
@@ -92,7 +135,7 @@ if __name__ == '__main__':
 
     rclpy.init()
 
-    img = droneController()
+    img = imageFilterNode()
     
     try:
         rclpy.spin(img) 
