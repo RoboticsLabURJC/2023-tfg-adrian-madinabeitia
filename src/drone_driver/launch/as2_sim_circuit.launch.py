@@ -11,8 +11,8 @@ sim_time = "true"
 
 # world = "/nurburgring_line.world"
 # world = "/simple_circuit.world"
-# world = "/montmelo_line.world"
-world = "/montreal_line.world"
+world = "/montmelo_line.world"
+# world = "/montreal_line.world"
 
 env_vars = {
     'AEROSTACK2_SIMULATION_DRONE_ID': namespace

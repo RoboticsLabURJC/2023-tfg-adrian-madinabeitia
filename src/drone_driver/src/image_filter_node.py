@@ -56,7 +56,7 @@ class imageFilterNode(Node):
         cv2.line(rgb_image, (width // 2, 0), (width // 2, height), (255, 0, 0), 1)
 
         cv2.imshow(label1, rgb_image)
-        cv2.imshow(label2, original)
+        #cv2.imshow(label2, original)
         cv2.waitKey(1)
 
     def color_filter(self, image):

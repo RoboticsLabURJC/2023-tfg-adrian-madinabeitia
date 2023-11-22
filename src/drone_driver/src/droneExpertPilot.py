@@ -24,27 +24,27 @@ MAX_PIXEL = 360
 
 # Image parameters
 LIMIT_UMBRAL = 40
-UPPER_PROPORTION = 0.7
-LOWER_PROPORTION = 0.3
+UPPER_PROPORTION = 0.6
+LOWER_PROPORTION = 0.4
 
 # Vel control
-MAX_ANGULAR = 2
-MAX_LINEAR = 2
+MAX_ANGULAR = 4
+MAX_LINEAR = 2.5
 MAX_Z = 2
 
 ## PID controlers
-ANG_KP = 0.5
-ANG_KD = 0.45
+ANG_KP = 0.8
+ANG_KD = 0.95
 ANG_KI = 0.0
 
-Z_KP = 0.8
-Z_KD = 0.4
+Z_KP = 0.5
+Z_KD = 0.45
 Z_KI = 0.0
 
 
 class droneController(DroneInterface):
 
-    def __init__(self, drone_id: str = "drone0", verbose: bool = False, use_sim_time: bool = False) -> None:
+    def __init__(self, drone_id: str = "drone0", verbose: bool = False, use_sim_time: bool = True) -> None:
         super().__init__(drone_id, verbose, use_sim_time)
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
 
@@ -61,34 +61,26 @@ class droneController(DroneInterface):
         self.px_rang = MAX_PIXEL - MIN_PIXEL
         self.ang_rang = MAX_ANGULAR - (- MAX_ANGULAR)
         self.linearVel = MAX_LINEAR
-        self.anguarVel = 0   # Updates in the listener callback
+
+        timer_period = 0.01  # seconds
+        self.timer = self.create_timer(timer_period, self.timer_callback)
 
         # Frequency analysis 
         self.image_timestamps = []
         self.vel_timestamps = []
 
+        self.cv_image = None
+
 
 
     def listener_callback(self, msg):
-        bridge = CvBridge()
-        cv_image = bridge.imgmsg_to_cv2(msg, "mono8") 
-        img_height = cv_image.shape[0]
 
-        width_center = cv_image.shape[1] / 2
-
-        top_point = search_top_line(cv_image)
-        bottom_point = search_bottom_line(cv_image)
-        red_farest = band_midpoint(cv_image, top_point, top_point + LIMIT_UMBRAL)
-        red_nearest = band_midpoint(cv_image, bottom_point-LIMIT_UMBRAL*2, bottom_point)
-                
-        angular_distance = (width_center - red_farest[0])#*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
-
-        # Pixel distance to angular vel transformation
-        angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
-        self.anguarVel = self.angular_pid.get_pid(angular)
-
-        # Frequency analysis 
         self.image_timestamps.append(time.time())
+
+        bridge = CvBridge()
+        self.cv_image = bridge.imgmsg_to_cv2(msg, "mono8") 
+        
+
 
     def retry_command(self, command, check_func, sleep_time=1.0, max_retries=1):
         if not check_func():
@@ -154,37 +146,55 @@ class droneController(DroneInterface):
 
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
+    
+    def get_angular_vel(self):
         
+        if self.cv_image is None:
+            return 0.0
+        
+        width_center = self.cv_image.shape[1] / 2
 
-    def velocityControl(self, height):
+        # Searchs limits of the line
+        top_point = search_top_line(self.cv_image)
+        bottom_point = search_bottom_line(self.cv_image)
+
+        # Searchs the reference points
+        red_farest = band_midpoint(self.cv_image, top_point, top_point + LIMIT_UMBRAL)
+        red_nearest = band_midpoint(self.cv_image, bottom_point-LIMIT_UMBRAL, bottom_point)
+                    
+        angular_distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
+
+        # Pixel distance to angular vel transformation
+        angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
+        anguarVel = self.angular_pid.get_pid(angular)
+
+        return anguarVel
+
+    def timer_callback(self):
         if self.info['state'] == PlatformStatus.FLYING:
-            # self.set_vel(self.linearVel, 0, 0, self.anguarVel)
-            self.set_vel2D(self.linearVel, 0, height, self.anguarVel)
+            
+            angular_vel = self.get_angular_vel()
+            self.get_logger().info("Angular vel = %f" % angular_vel)
+
+
+            # self.set_vel(self.linearVel, 0, 0, anguarVel)
+            self.set_vel2D(self.linearVel, 0, 2.0, angular_vel)
 
             self.vel_timestamps.append(time.time())
+        return
     
 
-if __name__ == '__main__':
-
+def main(args=None):
     height = 2.0
 
-    rclpy.init()
+    rclpy.init(args=args)
 
     drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True)
     drone.take_off_process(height)
 
-    try:
-        while True:
-            drone.velocityControl(height)
-            time.sleep(0.01)
-    
-    except KeyboardInterrupt:
-
-        np.save("~/vel_timestamps.txt", drone.vel_timestamps)
-        np.save("~/sub_timestamps.txt", drone.image_timestamps)
-        drone.land()
+    time.sleep(1)
+    rclpy.spin(drone)
         
-        print("Keyboard interrupt.")
 
 
     drone.destroy_node()
@@ -197,6 +207,10 @@ if __name__ == '__main__':
         print(f"An unexpected error occurred: {str(e)}")
     
     exit()
+
+
+if __name__ == '__main__':
+    main()
 
 
 

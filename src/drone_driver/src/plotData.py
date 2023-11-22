@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+COLOR = ["b", "r"]
+
 def plot_frequency(timestamps):
     intervals = []
 
@@ -14,7 +16,7 @@ def plot_frequency(timestamps):
 
     for i, interval in enumerate(intervals):
         plt.figure()  # Crea una nueva figura para cada plot
-        plt.plot(interval)
+        plt.plot(interval, linestyle=' ', marker='o', markersize=3, color=COLOR[i])
         plt.title(f'Timestamp Intervals - Plot {i + 1}')
         plt.xlabel('Interval Index')
         plt.ylabel('Time Interval (Miliseconds)')
@@ -23,8 +25,9 @@ def plot_frequency(timestamps):
 
 
 def main():
-    data = np.load("./TimestampsData.txt")
-    plot_frequency(data)
+    data = np.load("./sub_timestamps.npy")
+    data2 = np.load("./vel_timestamps.npy")
+    plot_frequency([data, data2])
 
 if __name__ == "__main__":
     main()
