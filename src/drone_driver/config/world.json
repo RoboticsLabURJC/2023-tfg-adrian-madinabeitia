@@ -1,5 +1,5 @@
 {
-    "world": "/home/adrian/workspace/install/drone_driver/share/drone_driver/worlds/montmelo_line.world",
+    "world": "/home/adrian/workspace/install/drone_driver/share/drone_driver/worlds/nurburgring_line.world",
     "drones": [
         {
             "model": "iris_dual_cam",

@@ -117,7 +117,7 @@ class imageFilterNode(Node):
 
 
         # Publish the filtered image
-        msg = bridge.cv2_to_imgmsg(img, encoding="mono8")
+        msg = bridge.cv2_to_imgmsg(mono_img, encoding="mono8")
         self.filteredPublisher_.publish(msg)
         
 

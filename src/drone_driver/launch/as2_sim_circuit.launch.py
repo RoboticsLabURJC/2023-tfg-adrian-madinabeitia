@@ -9,9 +9,9 @@ from launch_ros.actions import Node
 namespace= "drone0"
 sim_time = "true"
 
-# world = "/nurburgring_line.world"
+world = "/nurburgring_line.world"
 # world = "/simple_circuit.world"
-world = "/montmelo_line.world"
+#world = "/montmelo_line.world"
 # world = "/montreal_line.world"
 
 env_vars = {
