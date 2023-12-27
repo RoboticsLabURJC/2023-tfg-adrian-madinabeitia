@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+## Links: https://stackoverflow.com/questions/73420147/how-to-read-custom-message-type-using-ros2bag
 
 #!/usr/bin/env python3
 
@@ -18,8 +21,10 @@ import numpy as np
 import torch
 from torch.utils.data import random_split, Dataset
 
+import time
 
-DATA_PATH = "../../rosbagsCar/datasetBag"
+
+DATA_PATH = "../dataset/montmelo"
 LOWER_LIMIT = 0
 UPPER_LIMIT = 3
 
@@ -27,8 +32,12 @@ class rosbagDataset(Dataset):
     def __init__(self, main_dir, transform) -> None:
         self.main_dir = main_dir
         self.transform = transform
-        self.imgData = self.get_img(main_dir, "/cam_f1_left/image_raw")
-        self.velData = self.get_vel(main_dir, "/cmd_vel")
+
+        self.img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
+        self.vel_topic = "/drone0/motion_reference/twist"
+
+        
+        self.imgData, self.velData = self.get_from_rosbag(main_dir, self.img_topic, self.vel_topic)
 
         self.curveLimit = 0.5
         self.dataset = self.get_dataset()
@@ -37,8 +46,12 @@ class rosbagDataset(Dataset):
     def get_dataset(self):
         return self.balanceData(self.curveLimit)
 
-    def get_img(self, rosbag_dir, topic):
+    def get_from_rosbag(self, rosbag_dir, img_topic, vel_topic):
         imgs = []
+        vel = []
+        initTime = time.time()
+
+
         with ROS2Reader(rosbag_dir) as ros2_reader:
             
             channels = 3 # Encoding = bgr8
@@ -48,7 +61,7 @@ class rosbagDataset(Dataset):
             for m, msg in enumerate(ros2_messages):
                 (connection, timestamp, rawdata) = msg
                     
-                if (connection.topic == topic):
+                if (connection.topic == img_topic):
                     data = deserialize_cdr(rawdata, connection.msgtype)
 
                     # Saves the image in a readable format
@@ -56,27 +69,16 @@ class rosbagDataset(Dataset):
                     resizeImg = img.reshape((data.height, data.width, channels))
                     imgs.append(resizeImg)
 
-        
-        return imgs
-
-    def get_vel(self, rosbag_dir, topic):
-        vel = []
-
-        with ROS2Reader(rosbag_dir) as ros2_reader:
-
-            ros2_conns = [x for x in ros2_reader.connections]
-            ros2_messages = ros2_reader.messages(connections=ros2_conns)
-            
-            for m, msg in enumerate(ros2_messages):
-                (connection, timestamp, rawdata) = msg
-                    
-                if (connection.topic == topic):
+                if (connection.topic == vel_topic):
                     data = deserialize_cdr(rawdata, connection.msgtype)
-                    linear = data.linear.x
-                    angular = data.angular.z
-                    vel.append([linear, angular])
-        
-        return vel
+                    linear = data.twist.linear.x
+                    angular = data.twist.angular.z
+                    vel.append([linear, angular])       
+
+        print("*** Data obtained in ", time.time()- initTime, " seconds ***")
+        return imgs, vel
+
+
 
     def __len__(self):
         return len(self.velData)
@@ -91,17 +93,8 @@ class rosbagDataset(Dataset):
     def balanceData(self, angular_lim):
         curve_multiplier = 1
 
-        angular_velocities = [vel[1] for vel in self.velData]
-
-        straight_smaple = [index for index, vel in enumerate(angular_velocities) if abs(vel) <= angular_lim]
-        curve_sample = [index for index, vel in enumerate(angular_velocities) if abs(vel) > angular_lim]
-        
-        # Balances the numumber of curves in the dataset
-        curve_aument = int(1 / (len(curve_sample) / len(self.velData)))
-        n_curve = curve_multiplier * curve_aument   # Inreases the curve samples
-
-        balanced_index = np.concatenate([curve_sample] * n_curve + [straight_smaple])
-        balanced_dataset = [(self.imgData[i], self.velData[i]) for i in balanced_index]
+        print("** Image len = ", len(self.imgData), "    Vel len = ", len(self.velData))
+        balanced_dataset = [(self.imgData[i], self.velData[i]) for i in range(len(self.imgData))]
 
         return balanced_dataset
 
@@ -154,10 +147,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
-    # Metodos para desajuste:
-
-    # 1. Oversampling
-    # 2. Class weighting

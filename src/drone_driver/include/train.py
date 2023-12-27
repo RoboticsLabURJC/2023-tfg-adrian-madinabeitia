@@ -11,7 +11,7 @@ import torch.optim as optim
 import sys
 from models import pilotNet
 import keyboard
-from data import rosbagDataset, dataset_transforms, DATA_PATH
+from drone_driver.include.process_data import rosbagDataset, dataset_transforms, DATA_PATH
 import ament_index_python
 
 writer = SummaryWriter()
