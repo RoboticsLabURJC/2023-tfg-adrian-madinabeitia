@@ -7,12 +7,13 @@ from rclpy.node import Node
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 from geometry_msgs.msg import Twist
+import time
 
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
 
-from control_functions import band_midpoint, search_top_line, search_bottom_line
+from control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling
 from droneExpertPilot import LIMIT_UMBRAL
 
 
@@ -41,8 +42,15 @@ class imageFilterNode(Node):
         self.imageSubscription = self.create_subscription(Image, '/drone0/sensor_measurements/frontal_camera/image_raw', self.listener_callback, 1)
 
         self.px_rang = MAX_PIXEL - MIN_PIXEL
+        self.profiling = []
+        self.timer = self.create_timer(5.0, self.save_data)
 
-    def show_trace(self, label1, label2, rgb_image, original):
+    def save_data(self):
+        save_profiling('./profiling_image.txt', self.profiling)
+
+
+    def show_trace(self, label1, label2, mono_img, original):
+        rgb_image = cv2.cvtColor(mono_img, cv2.COLOR_GRAY2RGB)
         height, width, channels = rgb_image.shape
 
         top_point = search_top_line(rgb_image)
@@ -55,8 +63,8 @@ class imageFilterNode(Node):
         cv2.circle(rgb_image, red_farest, RADIUS, TRACE_COLOR, RADIUS)
         cv2.line(rgb_image, (width // 2, 0), (width // 2, height), (255, 0, 0), 1)
 
-        cv2.imshow(label1, rgb_image)
-        #cv2.imshow(label2, original)
+        # cv2.imshow(label1, rgb_image)
+        cv2.imshow(label2, original)
         cv2.waitKey(1)
 
     def color_filter(self, image):
@@ -97,37 +105,39 @@ class imageFilterNode(Node):
 
     def listener_callback(self, msg):
 
-
+        CallinitTime = time.time()
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
 
         # Filters
+        initTime = time.time()
         red_mask = self.color_filter(cv_image)
         img = self.image_aperture(red_mask)
 
         contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         filtered_contours = self.filter_contours(contours)
+        self.profiling.append(f"\nFilter time = {time.time() - initTime}")
 
-        # Draws the new image
+
+        # Draws tonly the big contour
+        initTime = time.time()
         mono_img = np.zeros_like(img)
 
         if filtered_contours != None:
             for contour in filtered_contours:
                 cv2.drawContours(mono_img, [contour], -1, 255, thickness=cv2.FILLED)
-
+        self.profiling.append(f"\nDrawing time = {time.time() - initTime}")
 
         # Publish the filtered image
         msg = bridge.cv2_to_imgmsg(mono_img, encoding="mono8")
         self.filteredPublisher_.publish(msg)
-        
+
+        self.profiling.append(f"\nCallback time = {time.time() - CallinitTime}")
 
         # Traces
-        # Create a binary mask to draw contours
-        rgb_image = cv2.cvtColor(mono_img, cv2.COLOR_GRAY2RGB)
-
 
         # Display the image with contours
-        self.show_trace("Countors: ", "Original:", rgb_image, img)
+        # self.show_trace("Countors: ", "Original:", mono_img, img)
 
 
 

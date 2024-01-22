@@ -1,5 +1,14 @@
 import numpy as np
 
+def save_timestamps(file_path, timestamps):
+    np.save(file_path, timestamps)
+
+def save_profiling(file_path, profiling_data):
+    with open(file_path, 'w') as file:
+        for entry in profiling_data:
+                file.write(entry + '\n')
+
+
 def search_top_line(image):
     img_height = image.shape[0]
     first_nonzero_row = 0

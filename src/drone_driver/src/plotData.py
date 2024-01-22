@@ -4,24 +4,24 @@ import matplotlib.pyplot as plt
 COLOR = ["b", "r"]
 
 def plot_frequency(timestamps):
-    intervals = []
+    frequencies = []
 
     for timestamp in timestamps:
-        interv = []
+        intervals = []
 
         for i in range(len(timestamp) - 1):
-            interv.append(timestamp[i + 1] - timestamp[i])
+            intervals.append(1 / (timestamp[i + 1] - timestamp[i]))
 
-        intervals.append(interv)
+        frequencies.append(intervals)
 
-    for i, interval in enumerate(intervals):
-        plt.figure()  # Crea una nueva figura para cada plot
-        plt.plot(interval, linestyle=' ', marker='o', markersize=3, color=COLOR[i])
-        plt.title(f'Timestamp Intervals - Plot {i + 1}')
+    for i, frequency in enumerate(frequencies):
+        plt.figure()  # Create a new figure for each plot
+        plt.plot(frequency, linestyle=' ', marker='o', markersize=3, color=COLOR[i])
+        plt.title(f'Publishing Frequency - Plot {i + 1}')
         plt.xlabel('Interval Index')
-        plt.ylabel('Time Interval (Miliseconds)')
+        plt.ylabel('Frequency (Hz)')
 
-    plt.show() 
+    plt.show()
 
 
 def main():

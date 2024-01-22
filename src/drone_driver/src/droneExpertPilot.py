@@ -17,7 +17,7 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge
 
-from control_functions import PID, band_midpoint, search_top_line, search_bottom_line
+from control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360
@@ -64,21 +64,29 @@ class droneController(DroneInterface):
 
         timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
+        self.timer = self.create_timer(5.0, self.save_data)
 
         # Frequency analysis 
         self.image_timestamps = []
         self.vel_timestamps = []
+        self.profiling = []
 
         self.cv_image = None
 
 
+    def save_data(self):
+
+        save_timestamps('./sub_timestamps.npy', self.image_timestamps)
+        save_timestamps('./vel_timestamps.npy', self.vel_timestamps)
+        save_profiling('./profiling_data.txt', self.profiling)
 
     def listener_callback(self, msg):
-
         self.image_timestamps.append(time.time())
 
+        initTime = time.time()
         bridge = CvBridge()
         self.cv_image = bridge.imgmsg_to_cv2(msg, "mono8") 
+        self.profiling.append(f"\nImage conversion time = {time.time() - initTime}")
         
 
 
@@ -136,8 +144,10 @@ class droneController(DroneInterface):
         errorZ = float(pz) - self.position[2]
         vz = self.z_pid.get_pid(errorZ)
 
+        initTime = time.time()
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
+        self.profiling.append(f"\nMotion_ref_handler = {time.time() - initTime}")
         
 
     def set_vel(self, vx, vy, vz, yaw):
@@ -148,31 +158,40 @@ class droneController(DroneInterface):
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
     
     def get_angular_vel(self):
-        
+        getAngTime = time.time()
         if self.cv_image is None:
             return 0.0
         
         width_center = self.cv_image.shape[1] / 2
 
         # Searchs limits of the line
+        initTime = time.time()
         top_point = search_top_line(self.cv_image)
         bottom_point = search_bottom_line(self.cv_image)
+        self.profiling.append(f"\nPoint getter= {time.time() - initTime}")
 
         # Searchs the reference points
+        initTime = time.time()
         red_farest = band_midpoint(self.cv_image, top_point, top_point + LIMIT_UMBRAL)
-        red_nearest = band_midpoint(self.cv_image, bottom_point-LIMIT_UMBRAL, bottom_point)
+        # red_nearest = band_midpoint(self.cv_image, bottom_point-LIMIT_UMBRAL, bottom_point)
+        self.profiling.append(f"\nReference point getter= {time.time() - initTime}")
                     
-        angular_distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
+        #angular_distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
+        angular_distance = (width_center - red_farest[0])
+
 
         # Pixel distance to angular vel transformation
         angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
         anguarVel = self.angular_pid.get_pid(angular)
 
+        self.profiling.append(f"\nGet angular time= {time.time() - getAngTime}")
         return anguarVel
 
     def timer_callback(self):
         if self.info['state'] == PlatformStatus.FLYING:
             
+
+            initTime = time.time()
             angular_vel = self.get_angular_vel()
             self.get_logger().info("Angular vel = %f" % angular_vel)
 
@@ -181,6 +200,8 @@ class droneController(DroneInterface):
             self.set_vel2D(self.linearVel, 0, 2.0, angular_vel)
 
             self.vel_timestamps.append(time.time())
+
+            self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
         return
     
 
