@@ -30,10 +30,15 @@ ROSBAGS_PATH = "../dataset"
 class rosbagDataset(Dataset):
     def __init__(self, rosbag_path) -> None:
         self.rosbag_path = rosbag_path
+
+        self.firstVelTimestamp = -1
+        self.firstImgTimestamp = -1
+
+        self.lastVelTimestamp = 0
+        self.asocciatedImage = True
        
 
     def transform_data(self, img_topic, vel_topic):
-        initTime = time.time()
 
         subdirectories = [d for d in os.listdir(self.rosbag_path) if os.path.isdir(os.path.join(self.rosbag_path, d))]
 
@@ -53,45 +58,49 @@ class rosbagDataset(Dataset):
                 ros2_conns = [x for x in ros2_reader.connections]
                 ros2_messages = ros2_reader.messages(connections=ros2_conns)
 
-                # Keep track of timestamps and corresponding image paths
-                img_timestamps = []
-                img_paths = []
 
+                # Generates all the mesaures of the topic
                 for m, msg in enumerate(ros2_messages):
                     (connection, timestamp, rawdata) = msg
 
-                    if connection.topic == img_topic:
-                        data = deserialize_cdr(rawdata, connection.msgtype)
-
-                        # Save the image in a readable format
-                        img = np.array(data.data, dtype=data.data.dtype)
-                        resizeImg = img.reshape((data.height, data.width, channels))
-
-                        # Save the data into a .jpg
-                        output_path = os.path.join(img_folder_path, f"{timestamp}.jpg")
-                        cv2.imwrite(output_path, cv2.cvtColor(resizeImg, cv2.COLOR_BGR2RGB))
-
-                        # Record the timestamp and image path
-                        img_timestamps.append(timestamp)
-                        img_paths.append(output_path)
-
-                for m, msg in enumerate(ros2_messages):
-                    (connection, timestamp, rawdata) = msg
-
+                    # Checks if is the velocitys topic
                     if connection.topic == vel_topic:
                         data = deserialize_cdr(rawdata, connection.msgtype)
                         linear = data.twist.linear.x
                         angular = data.twist.angular.z
+                        
 
-                        # Find the nearest timestamp
-                        nearest_timestamp = min(img_timestamps, key=lambda x: abs(x - timestamp))
-                        index = img_timestamps.index(nearest_timestamp)
-                        nearest_img_path = img_paths[index]
+                        # Checks the first timestamp
+                        if self.firstVelTimestamp == -1:
+                            self.firstVelTimestamp = timestamp
 
-                        # Save the data into a .txt only if there's a corresponding image
-                        output_path = os.path.join(labels_folder_path, f"{timestamp}.txt")
+                        # Save the data into a .txt
+                        output_path = os.path.join(labels_folder_path, f"{timestamp - self.firstVelTimestamp}.txt")
                         with open(output_path, "w") as txt_file:
-                            txt_file.write(f"{linear}, {angular}, {nearest_img_path}\n")
+                            txt_file.write(f"{linear}, {angular}\n")
+                        
+                        self.lastVelTimestamp = timestamp
+                        self.asocciatedImage = False
+
+                    # Checks if is the image topic
+                    if connection.topic == img_topic:
+                        data = deserialize_cdr(rawdata, connection.msgtype)
+
+                        # Converts the image in a readable format
+                        img = np.array(data.data, dtype=data.data.dtype)
+                        resizeImg = img.reshape((data.height, data.width, channels))
+
+                        # Checks the first timestamp
+                        if self.firstImgTimestamp == -1:
+                            self.firstImgTimestamp = timestamp
+
+                        if timestamp >= self.lastVelTimestamp and not self.asocciatedImage:
+                            # Save the data into a .jpg
+                            output_path = os.path.join(img_folder_path, f"{timestamp - self.firstImgTimestamp}.jpg")
+                            cv2.imwrite(output_path, cv2.cvtColor(resizeImg, cv2.COLOR_BGR2RGB))
+                            
+                            self.asocciatedImage = True
+
 
 
 
