@@ -4,38 +4,39 @@ import numpy as np
 import os
 from PIL import Image
 from imblearn.over_sampling import RandomOverSampler
+from imblearn.over_sampling import SMOTE
 
-def updateNumAngular(angularVel, value):
+# Sets the label to a velocity
+def updateNumAngular(value):
     label = 0
     if value > 0.50:
-        angularVel[2] += 1
-        label = 2
+        label = 3
+
     elif value > 0.25:
-        angularVel[1] += 1
-        label = 1
+        label = 2
+
     else:
-        angularVel[0] += 1
-        label = 0
-    return angularVel, label
+        label = 1
+    return label
+
 
 def read_image_folder_sorted_by_timestamp(folder_path):
     images = []
 
     try:
-        # Listar archivos en la carpeta
+        # Lists the files
         files = os.listdir(folder_path)
 
-        # Filtrar solo archivos con extensión .jpg
+        # Only reads .jpg
         jpg_files = [file for file in files if file.endswith('.jpg')]
 
-        # Ordenar archivos por timestamp
+        # Sort by timestamp
         sorted_files = sorted(jpg_files, key=lambda x: int(os.path.splitext(x)[0]))
 
-        # Leer archivos en orden
+        # Reads the images
         for file_name in sorted_files:
             file_path = os.path.join(folder_path, file_name)
 
-            # Leer la imagen usando Pillow (PIL)
             image = Image.open(file_path)
             image_array = np.array(image)
             images.append(image_array)
@@ -46,22 +47,20 @@ def read_image_folder_sorted_by_timestamp(folder_path):
     return images
 
 
-def read_folder_sorted_by_timestamp(folder_path):
-    angularPositiveVels = [0, 0, 0]
-    angularNegativeVels = [0, 0, 0]
+def get_labels(folder_path):
     labels = []
 
     try:
-        # Listar archivos en la carpeta
+        # Lists the files
         files = os.listdir(folder_path)
 
-        # Filtrar solo archivos con extensión .txt
+        # Only reads .txt
         txt_files = [file for file in files if file.endswith('.txt')]
 
-        # Ordenar archivos por timestamp
+        # Sort by timestamp
         sorted_files = sorted(txt_files, key=lambda x: int(os.path.splitext(x)[0]))
 
-        # Leer archivos en orden
+        # Reads the files
         for file_name in sorted_files:
             file_path = os.path.join(folder_path, file_name)
             with open(file_path, 'r') as file:
@@ -70,16 +69,14 @@ def read_folder_sorted_by_timestamp(folder_path):
 
                 # Updates the count
                 if numbers[1] > 0:
-                    angularPositiveVels, lab = updateNumAngular(angularPositiveVels, numbers[1])
-                    labels.append(lab)
+                    labels.append(updateNumAngular(numbers[1]))
                 else:
-                    angularNegativeVels, lab = updateNumAngular(angularNegativeVels, abs(numbers[1]))
-                    labels.append(-lab)
+                    labels.append(-updateNumAngular(abs(numbers[1])))
 
     except FileNotFoundError:
         print("Error: Carpeta no encontrada.")
     
-    return angularPositiveVels, angularNegativeVels, labels
+    return labels
 
 def plot_3d_bars(x, y, z, colors, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
     # Create the figure and 3D axes
@@ -105,34 +102,62 @@ def plot_3d_bars(x, y, z, colors, xlabel='X', ylabel='Y', zlabel='Z', title='3D 
     plt.show()
 
 
-def oversample_images(images, labels):
-    ros = RandomOverSampler(random_state=42)
-    X_resampled, y_resampled = ros.fit_resample(images.reshape(-1, 1), labels)
 
-    # Se devuelven las rutas de las imágenes y las etiquetas resampleadas
-    return X_resampled.flatten(), y_resampled
+def getLabelDistribution(labels):
+    positiveAngVels = [0, 0, 0]
+    negativeAngVels = [0, 0, 0]
+
+    # Counts the number of labels of each type
+    for label in labels:
+
+        if label == 3:
+            positiveAngVels[2] += 1
+
+        elif label == 2:
+            positiveAngVels[1] += 1
+
+        elif label == 1:
+            positiveAngVels[0] += 1
+
+        elif label == -3:
+            negativeAngVels[2] += 1
+
+        elif label == -2:
+            negativeAngVels[1] += 1
+        
+        else:
+            negativeAngVels[0] += 1
+
+
+    return positiveAngVels, negativeAngVels
 
 
 def main():
-    # Ejemplo de uso
+    # Data paths
     labels_path = '../dataset/simple_circuit/labels'
     images_path = '../dataset/simple_circuit/frontal_images'
 
-    angVelPos, angVelNeg, labels = read_folder_sorted_by_timestamp(labels_path)
+    labels = get_labels(labels_path)
     images = read_image_folder_sorted_by_timestamp(images_path)
+
+    nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
 
     # Data for the columns with linear
     x = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1])
     y = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2])
-    z = np.array([0, 0, 0, angVelNeg[0], angVelNeg[1], angVelNeg[2], angVelPos[0], angVelPos[1], angVelPos[2]])
+
+    z = np.array([0, 0, 0, 
+                  nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
+                  nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
 
     # Colors for each row
     colors = ['green', 'lightblue', 'blue']
 
-    # Llamar a la función de graficado
+    # Graphics
     plot_3d_bars(x, y, z, colors, xlabel='Min mel    Medium vel   Max vel ', ylabel='Linear, -Ang, +Ang', zlabel='Samples', title='Simple circuit')
 
-    # resampled_images, resampled_labels = oversample_images(np.array(images), np.array(labels))
+    smote = SMOTE(random_state=42)
+    X_train_resampled, y_train_resampled = smote.fit_resample(images, labels)
 
 if __name__ == "__main__":
     main()
