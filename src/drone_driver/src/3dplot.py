@@ -4,7 +4,7 @@ import numpy as np
 import os
 from PIL import Image
 from imblearn.over_sampling import RandomOverSampler
-
+from skimage.transform import resize
 
 # Sets the label to a velocity
 def updateNumAngular(value):
@@ -134,16 +134,28 @@ def getLabelDistribution(labels):
     return positiveAngVels, negativeAngVels
 
 
-def oversample_data(images, labels):
+def oversample_data(images, labels, downsample_label=2, downsample_factor=0.5):
     # Flatten images
     flattened_images = [image.flatten() for image in images]
 
-    # Oversample using RandomOverSampler
+    # Identify the indices of the specified label
+    downsample_indices = [i for i, label in enumerate(labels) if label == downsample_label]
+
+    # Calculate the number of samples to keep after downsampling
+    num_samples_to_keep = int(len(downsample_indices) * downsample_factor)
+
+    # Randomly select samples to keep
+    selected_indices = np.random.choice(downsample_indices, size=num_samples_to_keep, replace=False)
+
+    # Combine selected and non-selected indices
+    indices_to_keep = list(set(selected_indices) | set(i for i in range(len(labels)) if i not in downsample_indices))
+
+    # Use RandomOverSampler only for the selected indices
     ros = RandomOverSampler(random_state=42)
-    X_resampled, y_resampled = ros.fit_resample(flattened_images, labels)
+    X_resampled, y_resampled = ros.fit_resample(np.array(flattened_images)[indices_to_keep], np.array(labels)[indices_to_keep])
 
     # Reshape back to the original format
-    #X_resampled = [resampled_image.reshape(images[0].shape) for resampled_image in X_resampled]
+    # X_resampled = [resampled_image.reshape(images[0].shape) for resampled_image in X_resampled]
 
     return X_resampled, y_resampled
 
