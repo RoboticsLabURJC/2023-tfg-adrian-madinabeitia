@@ -4,7 +4,7 @@ import numpy as np
 import os
 from PIL import Image
 from imblearn.over_sampling import RandomOverSampler
-from imblearn.over_sampling import SMOTE
+
 
 # Sets the label to a velocity
 def updateNumAngular(value):
@@ -38,7 +38,9 @@ def read_image_folder_sorted_by_timestamp(folder_path):
             file_path = os.path.join(folder_path, file_name)
 
             image = Image.open(file_path)
-            image_array = np.array(image)
+            resized_image = image.resize((64, 64))
+
+            image_array = np.array(resized_image)
             images.append(image_array)
 
     except FileNotFoundError:
@@ -132,32 +134,54 @@ def getLabelDistribution(labels):
     return positiveAngVels, negativeAngVels
 
 
+def oversample_data(images, labels):
+    # Flatten images
+    flattened_images = [image.flatten() for image in images]
+
+    # Oversample using RandomOverSampler
+    ros = RandomOverSampler(random_state=42)
+    X_resampled, y_resampled = ros.fit_resample(flattened_images, labels)
+
+    # Reshape back to the original format
+    #X_resampled = [resampled_image.reshape(images[0].shape) for resampled_image in X_resampled]
+
+    return X_resampled, y_resampled
+
 def main():
     # Data paths
     labels_path = '../dataset/simple_circuit/labels'
     images_path = '../dataset/simple_circuit/frontal_images'
 
-    labels = get_labels(labels_path)
-    images = read_image_folder_sorted_by_timestamp(images_path)
-
-    nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
-
-    # Data for the columns with linear
+    # Data for the columns 
     x = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1])
     y = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2])
 
+    # Gets the dataset
+    labels = get_labels(labels_path)
+    images = read_image_folder_sorted_by_timestamp(images_path)
+
+    # Bars height
+    nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
     z = np.array([0, 0, 0, 
                   nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
                   nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
 
-    # Colors for each row
-    colors = ['green', 'lightblue', 'blue']
 
     # Graphics
-    plot_3d_bars(x, y, z, colors, xlabel='Min mel    Medium vel   Max vel ', ylabel='Linear, -Ang, +Ang', zlabel='Samples', title='Simple circuit')
+    colors = ['green', 'lightblue', 'blue']
+    xLabel = 'Min mel    Medium vel   Max vel'
+    yLabel = 'Linear, -Ang, +Ang'
+    zLabel = 'Samples'
+    plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
 
-    smote = SMOTE(random_state=42)
-    X_train_resampled, y_train_resampled = smote.fit_resample(images, labels)
 
+    # Oversampling
+    images, labels = oversample_data(images, labels)
+    nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
+    z = np.array([0, 0, 0, 
+                  nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
+                  nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
+    
+    plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Oversampled data')
 if __name__ == "__main__":
     main()
