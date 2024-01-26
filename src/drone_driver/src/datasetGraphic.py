@@ -4,7 +4,7 @@ import numpy as np
 import os
 from PIL import Image
 from imblearn.over_sampling import RandomOverSampler
-from skimage.transform import resize
+
 
 # Sets the label to a velocity
 def updateNumAngular(value):
@@ -80,29 +80,44 @@ def get_labels(folder_path):
     
     return labels
 
-def plot_3d_bars(x, y, z, colors, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
-    # Create the figure and 3D axes
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+# def plot_3d_bars(x, y, z, colors, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
+#     # Create the figure and 3D axes
+#     fig = plt.figure()
+#     ax = fig.add_subplot(111, projection='3d')
 
-    # Adjust the heights of the bars to go from 0 to their respective z values
-    bottoms = np.zeros_like(z)
-    width = depth = 0.8
+#     # Adjust the heights of the bars to go from 0 to their respective z values
+#     bottoms = np.zeros_like(z)
+#     width = depth = 0.8
 
-    # Create the 3D bars with different colors for each row
-    for i, color in zip(range(3), colors):
-        indices = y == i
-        ax.bar3d(x[indices], y[indices], bottoms[indices], dx=width, dy=depth, dz=z[indices], color=color)
+#     # Create the 3D bars with different colors for each row
+#     for i, color in zip(range(3), colors):
+#         indices = y == i
+#         ax.bar3d(x[indices], y[indices], bottoms[indices], dx=width, dy=depth, dz=z[indices], color=color)
 
-    # Set labels and title
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_zlabel(zlabel)
-    ax.set_title(title)
+#     # Set labels and title
+#     ax.set_xlabel(xlabel)
+#     ax.set_ylabel(ylabel)
+#     ax.set_zlabel(zlabel)
+#     ax.set_title(title)
 
-    # Show the plot
+#     ax.set_xticklabels([])
+#     ax.set_yticklabels([])
+#     # Show the plot
+#     plt.show()
+
+def plot_2D_bars(x, y, colors, xLabel='X', yLabel='Y', title='3D Plot'):
+
+    # Graphics
+    colors = ['green', 'lightblue', 'blue']
+    xLabel = 'Min mel    Medium vel   Max vel'
+    yLabel = 'Samples'
+
+    plt.bar(x, y, 0.1, color=colors)
+    plt.xlabel(xLabel)
+    plt.ylabel(yLabel)
+    plt.title(title)
+
     plt.show()
-
 
 
 def getLabelDistribution(labels):
@@ -165,8 +180,7 @@ def main():
     images_path = '../dataset/simple_circuit/frontal_images'
 
     # Data for the columns 
-    x = np.array([-1, 0, 1, -1, 0, 1, -1, 0, 1])
-    y = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2])
+    x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
 
     # Gets the dataset
     labels = get_labels(labels_path)
@@ -174,26 +188,24 @@ def main():
 
     # Bars height
     nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
-    z = np.array([0, 0, 0, 
-                  nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
+    z = np.array([nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
                   nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
 
 
     # Graphics
-    colors = ['green', 'lightblue', 'blue']
-    xLabel = 'Min mel    Medium vel   Max vel'
-    yLabel = 'Linear, -Ang, +Ang'
-    zLabel = 'Samples'
-    plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
-
+    colors = [ 'blue',]
+    xLabel = 'Angular vel'
+    yLabel = 'Samples'
+    # plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
+    plot_2D_bars(x, z, colors, xLabel=xLabel, yLabel=yLabel, title='Simple circuit')
 
     # Oversampling
-    images, labels = oversample_data(images, labels)
-    nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
-    z = np.array([0, 0, 0, 
-                  nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
-                  nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
+    # images, labels = oversample_data(images, labels)
+    # nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
+    # z = np.array([0, 0, 0, 
+    #               nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
+    #               nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
     
-    plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Oversampled data')
+    # plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Oversampled data')
 if __name__ == "__main__":
     main()

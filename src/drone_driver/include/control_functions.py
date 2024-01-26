@@ -3,6 +3,7 @@ import numpy as np
 def save_timestamps(file_path, timestamps):
     np.save(file_path, timestamps)
 
+
 def save_profiling(file_path, profiling_data):
     with open(file_path, 'w') as file:
         for entry in profiling_data:
