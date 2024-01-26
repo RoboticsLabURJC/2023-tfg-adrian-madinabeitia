@@ -106,7 +106,7 @@ class rosbagDataset(Dataset):
 
 
 #################################################################
-# Data analysis for training                                    #
+# Converts rosbags to general dataset                           #
 #################################################################
 
 

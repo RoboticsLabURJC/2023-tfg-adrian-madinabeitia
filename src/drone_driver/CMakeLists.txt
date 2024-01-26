@@ -30,15 +30,7 @@ include_directories(
 #=============
 
 ## Install Python scripts
-install(
-  PROGRAMS src/carExpertPilot.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
-install(
-  PROGRAMS src/carNeuralPilot.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 install(
   PROGRAMS src/parseWorld.py

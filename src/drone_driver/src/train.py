@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 
-from itertools import islice
 from torch.utils.tensorboard import SummaryWriter
 from torch import nn
 import torch
-from torch.serialization import save
 from torch.utils.data import DataLoader
-from torchvision import datasets, transforms
 import torch.optim as optim
 import sys
-from models import pilotNet
-import keyboard
-from drone_driver.include.process_data import rosbagDataset, dataset_transforms, DATA_PATH
 import ament_index_python
 
 writer = SummaryWriter()
 
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 CHECKPOINT_PATH = package_path + "/utils/network.tar"
+
+sys.path.append(package_path)
+from ..include.models import pilotNet
 
 
 def should_resume():
@@ -46,7 +43,7 @@ def train(model: pilotNet, optimizer: optim.Optimizer):
 
     criterion = nn.MSELoss()
 
-    dataset = rosbagDataset(DATA_PATH, dataset_transforms)
+    # dataset = rosbagDataset(DATA_PATH, dataset_transforms)
     train_loader = DataLoader(dataset, batch_size=50, shuffle=True)
 
     for epoch in range(12):

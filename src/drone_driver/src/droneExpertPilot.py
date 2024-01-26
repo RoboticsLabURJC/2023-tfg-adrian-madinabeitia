@@ -2,22 +2,14 @@
 
 import time
 import math
-import argparse
 import rclpy
 from as2_python_api.drone_interface import DroneInterface
 from as2_msgs.msg._platform_status import PlatformStatus
 from as2_python_api.modules.motion_reference_handler_module import MotionReferenceHandlerModule
-from as2_motion_reference_handlers.speed_motion import SpeedMotion
-from geometry_msgs.msg import TwistStamped, PoseStamped
-import matplotlib.pyplot as plt
-from std_msgs.msg import Float32
-
 from sensor_msgs.msg import Image
-import numpy as np
-import cv2
 from cv_bridge import CvBridge
 
-from control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
+from ..include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360

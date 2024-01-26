@@ -13,7 +13,7 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge
 
-from control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling
+from ..include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling
 from droneExpertPilot import LIMIT_UMBRAL
 
 
