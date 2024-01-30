@@ -1,84 +1,17 @@
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
-import os
-from PIL import Image
+import ament_index_python
 from imblearn.over_sampling import RandomOverSampler
+import sys
+from ament_index_python.packages import get_package_share_directory
+
+package_path = get_package_share_directory("drone_driver")
+sys.path.append(package_path)
+
+from include.data import get_labels
 
 
-# Sets the label to a velocity
-def updateNumAngular(value):
-    label = 0
-    if value > 0.50:
-        label = 3
-
-    elif value > 0.25:
-        label = 2
-
-    else:
-        label = 1
-    return label
-
-
-def read_image_folder_sorted_by_timestamp(folder_path):
-    images = []
-
-    try:
-        # Lists the files
-        files = os.listdir(folder_path)
-
-        # Only reads .jpg
-        jpg_files = [file for file in files if file.endswith('.jpg')]
-
-        # Sort by timestamp
-        sorted_files = sorted(jpg_files, key=lambda x: int(os.path.splitext(x)[0]))
-
-        # Reads the images
-        for file_name in sorted_files:
-            file_path = os.path.join(folder_path, file_name)
-
-            image = Image.open(file_path)
-            resized_image = image.resize((64, 64))
-
-            image_array = np.array(resized_image)
-            images.append(image_array)
-
-    except FileNotFoundError:
-        print("Error: Carpeta no encontrada.")
-
-    return images
-
-
-def get_labels(folder_path):
-    labels = []
-
-    try:
-        # Lists the files
-        files = os.listdir(folder_path)
-
-        # Only reads .txt
-        txt_files = [file for file in files if file.endswith('.txt')]
-
-        # Sort by timestamp
-        sorted_files = sorted(txt_files, key=lambda x: int(os.path.splitext(x)[0]))
-
-        # Reads the files
-        for file_name in sorted_files:
-            file_path = os.path.join(folder_path, file_name)
-            with open(file_path, 'r') as file:
-                content = file.read()
-                numbers = [float(num) for num in content.split(',')]
-
-                # Updates the count
-                if numbers[1] > 0:
-                    labels.append(updateNumAngular(numbers[1]))
-                else:
-                    labels.append(-updateNumAngular(abs(numbers[1])))
-
-    except FileNotFoundError:
-        print("Error: Carpeta no encontrada.")
-    
-    return labels
 
 # def plot_3d_bars(x, y, z, colors, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
 #     # Create the figure and 3D axes
@@ -176,15 +109,15 @@ def oversample_data(images, labels, downsample_label=2, downsample_factor=0.5):
 
 def main():
     # Data paths
-    labels_path = '../dataset/simple_circuit/labels'
-    images_path = '../dataset/simple_circuit/frontal_images'
+    labels_path = '../training_dataset/labels'
+    images_path = '../training_dataset/frontal_images'
 
     # Data for the columns 
     x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
 
     # Gets the dataset
-    labels = get_labels(labels_path)
-    images = read_image_folder_sorted_by_timestamp(images_path)
+    vels, labels = get_labels(labels_path)
+    #images = get_image_dataset(images_path)
 
     # Bars height
     nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)

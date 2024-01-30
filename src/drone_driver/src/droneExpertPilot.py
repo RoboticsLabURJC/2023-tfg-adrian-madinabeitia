@@ -8,8 +8,13 @@ from as2_msgs.msg._platform_status import PlatformStatus
 from as2_python_api.modules.motion_reference_handler_module import MotionReferenceHandlerModule
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
+import sys
 
-from ..include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
+import ament_index_python
+package_path = ament_index_python.get_package_share_directory("drone_driver")
+sys.path.append(package_path)
+
+from include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360

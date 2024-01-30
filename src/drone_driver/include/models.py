@@ -25,7 +25,7 @@ class pilotNet(nn.Module):
             nn.Linear(1164, 100),
             nn.Linear(100, 50),
             nn.Linear(50, 10),
-            nn.Linear(10, 2),       # Segun el modelo tiene sentido pero sería así??? Se cambió a 2 ya que sería v angular y lineal en caso del coche
+            nn.Linear(10, 1),       # Segun el modelo tiene sentido pero sería así??? Se cambió a 2 ya que sería v angular y lineal en caso del coche
         )
         
     def forward(self, x):

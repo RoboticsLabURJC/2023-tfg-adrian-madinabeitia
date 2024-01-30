@@ -10,22 +10,13 @@
 
 from rosbags.rosbag2 import Reader as ROS2Reader
 from rosbags.serde import deserialize_cdr
-import matplotlib.pyplot as plt
-import torch
-import torchvision.transforms as transforms
-
-from torch.utils.tensorboard import SummaryWriter
-from datetime import datetime
-import matplotlib.pyplot as plt
 import numpy as np
-import torch
-from torch.utils.data import random_split, Dataset
+from torch.utils.data import Dataset
 import os
-import time
 import cv2
 
 
-ROSBAGS_PATH = "../dataset"
+ROSBAGS_PATH = "../training_dataset"
 
 class rosbagDataset(Dataset):
     def __init__(self, rosbag_path) -> None:
@@ -42,12 +33,12 @@ class rosbagDataset(Dataset):
 
         subdirectories = [d for d in os.listdir(self.rosbag_path) if os.path.isdir(os.path.join(self.rosbag_path, d))]
 
-        for subdirectory in subdirectories:
+        for folderNum, subdirectory in enumerate(subdirectories):
             rosbag_dir = os.path.join(self.rosbag_path, subdirectory)
 
             # Create the folders if they don't exist
-            img_folder_path = os.path.join(rosbag_dir, "frontal_images")
-            labels_folder_path = os.path.join(rosbag_dir, "labels")
+            img_folder_path = os.path.join(self.rosbag_path, "frontal_images")
+            labels_folder_path = os.path.join(self.rosbag_path, "labels")
 
             os.makedirs(img_folder_path, exist_ok=True)
             os.makedirs(labels_folder_path, exist_ok=True)
@@ -75,7 +66,7 @@ class rosbagDataset(Dataset):
                             self.firstVelTimestamp = timestamp
 
                         # Save the data into a .txt
-                        output_path = os.path.join(labels_folder_path, f"{timestamp - self.firstVelTimestamp}.txt")
+                        output_path = os.path.join(labels_folder_path, f"{folderNum}_{m}.txt")
                         with open(output_path, "w") as txt_file:
                             txt_file.write(f"{linear}, {angular}\n")
                         
@@ -88,7 +79,7 @@ class rosbagDataset(Dataset):
 
                         # Converts the image in a readable format
                         img = np.array(data.data, dtype=data.data.dtype)
-                        resizeImg = img.reshape((data.height, data.width, channels))
+                        cvImage = img.reshape((data.height, data.width, channels))
 
                         # Checks the first timestamp
                         if self.firstImgTimestamp == -1:
@@ -96,8 +87,9 @@ class rosbagDataset(Dataset):
 
                         if timestamp >= self.lastVelTimestamp and not self.asocciatedImage:
                             # Save the data into a .jpg
-                            output_path = os.path.join(img_folder_path, f"{timestamp - self.firstImgTimestamp}.jpg")
-                            cv2.imwrite(output_path, cv2.cvtColor(resizeImg, cv2.COLOR_BGR2RGB))
+                            output_path = os.path.join(img_folder_path, f"{folderNum}_{m}.jpg")
+                            resized = cv2.resize(cvImage, (160, 120))
+                            cv2.imwrite(output_path, cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
                             
                             self.asocciatedImage = True
 

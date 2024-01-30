@@ -10,73 +10,111 @@
 
 from rosbags.rosbag2 import Reader as ROS2Reader
 from rosbags.serde import deserialize_cdr
-import matplotlib.pyplot as plt
 import torch
 import torchvision.transforms as transforms
 
-from torch.utils.tensorboard import SummaryWriter
-from datetime import datetime
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-from torch.utils.data import random_split, Dataset
 
+from torch.utils.data import Dataset
+import os
+from PIL import Image
 import time
 
 
-DATA_PATH = "../dataset/montmelo"
+DATA_PATH = "../training_dataset"
 LOWER_LIMIT = 0
 UPPER_LIMIT = 3
+
+def get_image_dataset(folder_path):
+    images = []
+
+    try:
+        # Lists the files
+        files = os.listdir(folder_path)
+
+        # Only reads .jpg
+        jpg_files = [file for file in files if file.endswith('.jpg')]
+
+        # Sort by timestamp
+        sorted_files = sorted(jpg_files, key=lambda x: int(os.path.splitext(x)[0]))
+
+        # Reads the images
+        for file_name in sorted_files:
+            file_path = os.path.join(folder_path, file_name)
+
+            image = Image.open(file_path)
+            resized_image = image.resize((64, 64))
+
+            image_array = np.array(resized_image)
+            images.append(image_array)
+
+    except FileNotFoundError:
+        print("Error: Carpeta no encontrada.")
+
+    return images
+
+# Sets the label to a velocity
+def updateNumAngular(value):
+    label = 0
+    if value > 0.50:
+        label = 3
+
+    elif value > 0.25:
+        label = 2
+
+    else:
+        label = 1
+    return label
+
+def get_labels(folder_path):
+    labels = []
+    vels = []
+
+    try:
+        # Lists the files
+        files = os.listdir(folder_path)
+
+        # Only reads .txt
+        txt_files = [file for file in files if file.endswith('.txt')]
+
+        # Sort by timestamp
+        sorted_files = sorted(txt_files, key=lambda x: int(os.path.splitext(x)[0]))
+
+        # Reads the files
+        for file_name in sorted_files:
+            file_path = os.path.join(folder_path, file_name)
+            with open(file_path, 'r') as file:
+                content = file.read()
+                numbers = [float(num) for num in content.split(',')]
+
+                # Updates the count
+                if numbers[1] > 0:
+                    labels.append(updateNumAngular(numbers[1]))
+                else:
+                    labels.append(-updateNumAngular(abs(numbers[1])))
+                
+                vels.append([numbers[1]*10])
+
+    except FileNotFoundError:
+        print("Error: Carpeta no encontrada.")
+    
+    return vels, labels
 
 class rosbagDataset(Dataset):
     def __init__(self, main_dir, transform) -> None:
         self.main_dir = main_dir
         self.transform = transform
-
-        self.img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
-        self.vel_topic = "/drone0/motion_reference/twist"
-
         
-        self.imgData, self.velData = self.get_from_rosbag(main_dir, self.img_topic, self.vel_topic)
+        self.imgData = get_image_dataset(main_dir + "/frontal_images")
+        self.velData, self.labels = get_labels(main_dir + "/labels")
 
-        self.curveLimit = 0.5
         self.dataset = self.get_dataset()
        
 
     def get_dataset(self):
-        return self.balanceData(self.curveLimit)
-
-    def get_from_rosbag(self, rosbag_dir, img_topic, vel_topic):
-        imgs = []
-        vel = []
-        initTime = time.time()
-
-
-        with ROS2Reader(rosbag_dir) as ros2_reader:
-            
-            channels = 3 # Encoding = bgr8
-            ros2_conns = [x for x in ros2_reader.connections]
-            ros2_messages = ros2_reader.messages(connections=ros2_conns)      
-
-            for m, msg in enumerate(ros2_messages):
-                (connection, timestamp, rawdata) = msg
-                    
-                if (connection.topic == img_topic):
-                    data = deserialize_cdr(rawdata, connection.msgtype)
-
-                    # Saves the image in a readable format
-                    img = np.array(data.data, dtype=data.data.dtype)
-                    resizeImg = img.reshape((data.height, data.width, channels))
-                    imgs.append(resizeImg)
-
-                if (connection.topic == vel_topic):
-                    data = deserialize_cdr(rawdata, connection.msgtype)
-                    linear = data.twist.linear.x
-                    angular = data.twist.angular.z
-                    vel.append([linear, angular])       
-
-        print("*** Data obtained in ", time.time()- initTime, " seconds ***")
-        return imgs, vel
+        
+        return self.balanceData()
 
 
 
@@ -90,11 +128,8 @@ class rosbagDataset(Dataset):
 
         return (vel_tensor, image_tensor)
 
-    def balanceData(self, angular_lim):
-        curve_multiplier = 1
-
-        print("** Image len = ", len(self.imgData), "    Vel len = ", len(self.velData))
-        balanced_dataset = [(self.imgData[i], self.velData[i]) for i in range(len(self.imgData))]
+    def balanceData(self):
+        balanced_dataset = [(self.imgData[i], self.velData[i]) for i in range(len(self.velData))]
 
         return balanced_dataset
 
@@ -122,27 +157,14 @@ dataset_transforms = transforms.Compose([
 
 
 def main():
-    D = 2  # Decimals to show in the traces
     dataset = rosbagDataset(DATA_PATH, dataset_transforms)
 
     vels = [velocitys for image, velocitys in dataset.dataset]
-    linear_velocities = [vel[0] for vel in vels]
-    angular_velocities = [vel[1] for vel in vels]
+    images = [image for image, velocitys in dataset.dataset]
 
-    # Plots the results
-    plt.figure(figsize=(10, 6))
+    print("** Image len = ", len(images), "    Vel len = ", len(vels))
 
-    plotContinuousGraphic("lineal", linear_velocities, 'b', 1)
-    plotContinuousGraphic("angular", angular_velocities, 'g', 2)
-    
-    straight_smaples = [index for index, velocidad in enumerate(angular_velocities) if abs(velocidad) <= dataset.curveLimit]
-    percentage = len(straight_smaples)/len(linear_velocities) * 1
 
-    print(f"* Linear  samples => {round(percentage * 100, D)}%, mean = {round(np.mean(linear_velocities), D)}")
-    print(f"* Curve samples => {round((1 - percentage) * 100, D)}%, mean = {round(np.mean(angular_velocities), D)}")
-
-    plt.tight_layout()
-    plt.show()
 
 
 if __name__ == "__main__":

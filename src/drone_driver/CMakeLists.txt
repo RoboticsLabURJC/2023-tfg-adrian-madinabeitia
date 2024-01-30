@@ -43,6 +43,11 @@ install(
 )
 
 install(
+  PROGRAMS src/droneNeuralPilot.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
   PROGRAMS src/image_filter_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
