@@ -1,3 +1,6 @@
-src/drone_driver/dataset
+src/drone_driver/test_dataset
+src/drone_driver/training_dataset
 src/drone_driver/prueba
 src/drone_driver/src/car
+src/drone_driver/profiling
+src/drone_driver/utils/*.tar

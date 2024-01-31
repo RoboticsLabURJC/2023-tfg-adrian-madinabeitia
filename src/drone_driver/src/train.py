@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 from torch.utils.tensorboard import SummaryWriter
 from torch import nn
 import torch
@@ -12,33 +11,29 @@ import sys
 
 import ament_index_python
 
-writer = SummaryWriter()
-
+# Package includes
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
 from include.data import rosbagDataset, dataset_transforms, DATA_PATH
 from include.models import pilotNet
 
-CHECKPOINT_PATH = package_path + "/utils/network.tar"
+writer = SummaryWriter()
 
 
 def should_resume():
     return "--resume" in sys.argv or "-r" in sys.argv
 
 
-def save_checkpoint(model: pilotNet, optimizer: optim.Optimizer):
+def save_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer):
     torch.save({
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
-    }, CHECKPOINT_PATH)
+    }, path)
 
 
-def load_checkpoint(model: pilotNet, optimizer: optim.Optimizer = None):
-    package_path = ament_index_python.get_package_share_directory("drone_driver")
-    CHECKPOINT_PATH = package_path + "/utils/network.tar"
-    
-    checkpoint = torch.load(CHECKPOINT_PATH)
+def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None):
+    checkpoint = torch.load(path)
 
     model.load_state_dict(checkpoint["model_state_dict"])
 
@@ -46,21 +41,17 @@ def load_checkpoint(model: pilotNet, optimizer: optim.Optimizer = None):
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
 
+def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
 
-
-def train(model: pilotNet, optimizer: optim.Optimizer):
-
+    # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
     dataset = rosbagDataset(DATA_PATH, dataset_transforms)
-    print("** Image len = ", len(dataset.imgData), "    Vel len = ", len(dataset.velData))
+    dataset.balancedDataset()
 
+    train_loader = DataLoader(dataset, batch_size=50, shuffle=True)
 
-    train_loader = DataLoader(dataset, batch_size=20)
-
-    for epoch in range(10):
-
-        running_loss = 0.0
+    for epoch in range(30):
 
         for i, data in enumerate(train_loader, 0):
 
@@ -73,37 +64,41 @@ def train(model: pilotNet, optimizer: optim.Optimizer):
             # forward + backward + optimize
             outputs = model(image)
             loss = criterion(outputs, label)
-            writer.add_scalar("Loss/train", loss, epoch)
+            
             loss.backward()
             optimizer.step()
 
-            # print statistics
-            running_loss += loss.item()
+            # Loss graphic
+            writer.add_scalar("Loss/train", loss, epoch)
+
+            # Saves the model
             if i % 10 == 0:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' %
                       (epoch + 1, i + 1, loss))
-                running_loss = 0.0
                 # print("Output = ", outputs,  "labels = ", label, "==== Loss = ", loss, "\n\n")
-
-                save_checkpoint(model, optimizer)
+                save_checkpoint(checkpointPath, model, optimizer)
             
-            
-
     print('Finished Training')
 
 
 if __name__ == "__main__":
+
+    # Gets the model path
+    package_path = ament_index_python.get_package_share_directory("drone_driver")
+    checkpointPath = package_path + "/utils/network.tar"
+
     model = pilotNet()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.1)
 
     if should_resume():
-        load_checkpoint(model, optimizer)
+        load_checkpoint(checkpointPath, model, optimizer)
 
     device = torch.device("cuda:0")
     model.to(device)
     model.train(True)
 
     train(
+        checkpointPath,
         model,
         optimizer,
     )

@@ -1,19 +1,24 @@
 #!/bin/python3
 
+import sys
+
 from time import sleep
 import rclpy
 from rclpy.node import Node
 
-from std_msgs.msg import String
 from sensor_msgs.msg import Image
-from geometry_msgs.msg import Twist
 import time
 
 import numpy as np
 import cv2
 from cv_bridge import CvBridge
+import ament_index_python
 
-from ..include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling
+# Package includes
+package_path = ament_index_python.get_package_share_directory("drone_driver")
+sys.path.append(package_path)
+
+from include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling
 from droneExpertPilot import LIMIT_UMBRAL
 
 

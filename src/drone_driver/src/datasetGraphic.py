@@ -9,8 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 package_path = get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.data import get_labels
-
+from include.data import rosbagDataset, DATA_PATH, dataset_transforms
 
 
 # def plot_3d_bars(x, y, z, colors, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
@@ -82,63 +81,64 @@ def getLabelDistribution(labels):
     return positiveAngVels, negativeAngVels
 
 
-def oversample_data(images, labels, downsample_label=2, downsample_factor=0.5):
-    # Flatten images
-    flattened_images = [image.flatten() for image in images]
 
-    # Identify the indices of the specified label
-    downsample_indices = [i for i, label in enumerate(labels) if label == downsample_label]
+def updateNumAngular(value):
+    label = 0
+    if value >= 0.50:
+        label = 3
+    elif value >= 0.25:
+        label = 2
+    else:
+        label = 1
+    return label
 
-    # Calculate the number of samples to keep after downsampling
-    num_samples_to_keep = int(len(downsample_indices) * downsample_factor)
+def get_labels(vels):
+    labels = []
+    for vel in vels:
+        if vel[0] >= 0:
+            labels.append(updateNumAngular(vel[0]/10))
+        
+        else:
+            labels.append(-updateNumAngular(abs(vel[0])/10))
+    return labels
 
-    # Randomly select samples to keep
-    selected_indices = np.random.choice(downsample_indices, size=num_samples_to_keep, replace=False)
-
-    # Combine selected and non-selected indices
-    indices_to_keep = list(set(selected_indices) | set(i for i in range(len(labels)) if i not in downsample_indices))
-
-    # Use RandomOverSampler only for the selected indices
-    ros = RandomOverSampler(random_state=42)
-    X_resampled, y_resampled = ros.fit_resample(np.array(flattened_images)[indices_to_keep], np.array(labels)[indices_to_keep])
-
-    # Reshape back to the original format
-    # X_resampled = [resampled_image.reshape(images[0].shape) for resampled_image in X_resampled]
-
-    return X_resampled, y_resampled
 
 def main():
-    # Data paths
-    labels_path = '../training_dataset/labels'
-    images_path = '../training_dataset/frontal_images'
-
     # Data for the columns 
     x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
-
+    
     # Gets the dataset
-    vels, labels = get_labels(labels_path)
-    #images = get_image_dataset(images_path)
+    data = rosbagDataset(DATA_PATH, dataset_transforms)
+    vels = [velocitys for image, velocitys in data.dataset]
+    labels = get_labels(vels)
 
     # Bars height
     nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
-    z = np.array([nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
+    z = np.array([nAngVelNeagtive[2], nAngVelNeagtive[1], nAngVelNeagtive[0], 
                   nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
-
 
     # Graphics
     colors = [ 'blue',]
     xLabel = 'Angular vel'
     yLabel = 'Samples'
-    # plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
-    plot_2D_bars(x, z, colors, xLabel=xLabel, yLabel=yLabel, title='Simple circuit')
 
-    # Oversampling
-    # images, labels = oversample_data(images, labels)
-    # nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
-    # z = np.array([0, 0, 0, 
-    #               nAngVelNeagtive[0], nAngVelNeagtive[1], nAngVelNeagtive[2], 
-    #               nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
-    
-    # plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Oversampled data')
+    # plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
+    plot_2D_bars(x, z, colors, xLabel=xLabel, yLabel=yLabel, title='Raw dataset')
+
+
+    # Plots the balanced data
+    dataset = data.balancedDataset()
+    vels = [velocitys for image, velocitys in data.dataset]
+    labels = get_labels(vels)
+
+    # Bars height
+    nAngVelPositive, nAngVelNeagtive = getLabelDistribution(labels)
+    z = np.array([nAngVelNeagtive[2], nAngVelNeagtive[1], nAngVelNeagtive[0], 
+                  nAngVelPositive[0], nAngVelPositive[1], nAngVelPositive[2]])
+
+
+    # plot_3d_bars(x, y, z, colors, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
+    plot_2D_bars(x, z, colors, xLabel=xLabel, yLabel=yLabel, title='Balanced dataset')
+
 if __name__ == "__main__":
     main()
