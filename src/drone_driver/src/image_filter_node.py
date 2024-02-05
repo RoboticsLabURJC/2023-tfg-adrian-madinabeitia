@@ -61,8 +61,8 @@ class imageFilterNode(Node):
         top_point = search_top_line(rgb_image)
         bottom_point = search_bottom_line(rgb_image)
 
-        red_farest = band_midpoint(rgb_image, top_point, top_point+LIMIT_UMBRAL)
-        red_nearest = band_midpoint(rgb_image, bottom_point-LIMIT_UMBRAL, bottom_point)
+        red_farest = band_midpoint(mono_img, top_point, top_point + LIMIT_UMBRAL)
+        red_nearest = band_midpoint(mono_img, bottom_point-LIMIT_UMBRAL, bottom_point)
 
         cv2.circle(rgb_image, red_nearest, RADIUS, TRACE_COLOR, RADIUS)
         cv2.circle(rgb_image, red_farest, RADIUS, TRACE_COLOR, RADIUS)
@@ -142,7 +142,7 @@ class imageFilterNode(Node):
         # Traces
 
         # Display the image with contours
-        # self.show_trace("Countors: ", "Original:", mono_img, img)
+        self.show_trace("Countors: ", "Original:", mono_img, img)
 
 
 

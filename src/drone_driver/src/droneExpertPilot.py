@@ -9,6 +9,7 @@ from as2_python_api.modules.motion_reference_handler_module import MotionReferen
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import sys
+import numpy as np
 
 import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
@@ -25,18 +26,23 @@ UPPER_PROPORTION = 0.6
 LOWER_PROPORTION = 0.4
 
 # Vel control
-MAX_ANGULAR = 4
-MAX_LINEAR = 2.5
-MAX_Z = 2
+MAX_ANGULAR = 1.5
+MAX_LINEAR = 5.0
+MIN_LINEAR = 2.5
+MAX_Z = 2.0
 
 ## PID controlers
-ANG_KP = 0.8
-ANG_KD = 0.75
+ANG_KP = 3.0
+ANG_KD = 2.75
 ANG_KI = 0.0
 
 Z_KP = 0.5
 Z_KD = 0.45
 Z_KI = 0.0
+
+LIN_KP = 1.0
+LIN_KD = 2.0
+LIN_KI = 0.0
 
 
 class droneController(DroneInterface):
@@ -53,6 +59,9 @@ class droneController(DroneInterface):
 
         self.z_pid = PID(-MAX_Z , MAX_Z)
         self.z_pid.set_pid(Z_KP, Z_KD, Z_KI)
+
+        self.linear_pid = PID(MIN_LINEAR, MAX_LINEAR)
+        self.linear_pid.set_pid(LIN_KP, LIN_KD, LIN_KI)
         
         # Control
         self.px_rang = MAX_PIXEL - MIN_PIXEL
@@ -61,7 +70,7 @@ class droneController(DroneInterface):
 
         timer_period = 0.01  # seconds
         self.timer = self.create_timer(timer_period, self.timer_callback)
-        self.timer = self.create_timer(5.0, self.save_data)
+        self.saver = self.create_timer(5.0, self.save_data)
 
         # Frequency analysis 
         self.image_timestamps = []
@@ -72,7 +81,6 @@ class droneController(DroneInterface):
 
 
     def save_data(self):
-
         save_timestamps('./sub_timestamps.npy', self.image_timestamps)
         save_timestamps('./vel_timestamps.npy', self.vel_timestamps)
         save_profiling('./profiling_data.txt', self.profiling)
@@ -80,12 +88,12 @@ class droneController(DroneInterface):
     def listener_callback(self, msg):
         self.image_timestamps.append(time.time())
 
+        # Image conversion to cv2 format
         initTime = time.time()
         bridge = CvBridge()
         self.cv_image = bridge.imgmsg_to_cv2(msg, "mono8") 
         self.profiling.append(f"\nImage conversion time = {time.time() - initTime}")
         
-
 
     def retry_command(self, command, check_func, sleep_time=1.0, max_retries=1):
         if not check_func():
@@ -128,19 +136,24 @@ class droneController(DroneInterface):
     def land_process(self, speed):
         self.get_logger().info("Landing")
 
+        # Land process
         self.land(speed=speed)
         self.get_logger().info("Land done")
 
+        # Disarms the drone
         self.disarm()
     
 
     def set_vel2D(self, vx, vy, pz, yaw):
+        # Gets the drone velocitys
         velX = vx * math.cos(self.orientation[2]) + vy * math.sin(self.orientation[2])
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
 
+        # Z pid
         errorZ = float(pz) - self.position[2]
         vz = self.z_pid.get_pid(errorZ)
 
+        # Sends the velocity command
         initTime = time.time()
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
@@ -148,9 +161,11 @@ class droneController(DroneInterface):
         
 
     def set_vel(self, vx, vy, vz, yaw):
+        # Gets the drone velocitys
         velX = vx * math.cos(self.orientation[2]) + vy * math.sin(self.orientation[2])
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
 
+        # Sends the velocity command
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
     
@@ -162,20 +177,16 @@ class droneController(DroneInterface):
         width_center = self.cv_image.shape[1] / 2
 
         # Searchs limits of the line
-        initTime = time.time()
         top_point = search_top_line(self.cv_image)
         bottom_point = search_bottom_line(self.cv_image)
-        self.profiling.append(f"\nPoint getter= {time.time() - initTime}")
 
         # Searchs the reference points
-        initTime = time.time()
         red_farest = band_midpoint(self.cv_image, top_point, top_point + LIMIT_UMBRAL)
-        # red_nearest = band_midpoint(self.cv_image, bottom_point-LIMIT_UMBRAL, bottom_point)
-        self.profiling.append(f"\nReference point getter= {time.time() - initTime}")
-                    
-        #angular_distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
-        angular_distance = (width_center - red_farest[0])
+        red_nearest = band_midpoint(self.cv_image, bottom_point-LIMIT_UMBRAL, bottom_point)
 
+        # Gets the angular error                    
+        angular_distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
+        # angular_distance = (width_center - red_farest[0])
 
         # Pixel distance to angular vel transformation
         angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
@@ -183,38 +194,46 @@ class droneController(DroneInterface):
 
         self.profiling.append(f"\nGet angular time= {time.time() - getAngTime}")
         return anguarVel
+    
+    def get_linear_vel(self, angularVel):
+        error = MAX_LINEAR -  np.interp(abs(angularVel), (0, MAX_ANGULAR), (0, MAX_LINEAR-MIN_LINEAR))
+        linearVel = self.linear_pid.get_pid(error)
+
+        return linearVel 
 
     def timer_callback(self):
         if self.info['state'] == PlatformStatus.FLYING:
-            
-
             initTime = time.time()
-            angular_vel = self.get_angular_vel()
-            self.get_logger().info("Angular vel = %f" % angular_vel)
 
+            # Gets drone velocitys
+            angularVel = self.get_angular_vel()
+            linearVel = self.get_linear_vel(angularVel)
+            self.get_logger().info("Angular vel = %f || Linear vel = %f" % (angularVel, linearVel))
 
+            # Set the velocity
             # self.set_vel(self.linearVel, 0, 0, anguarVel)
-            self.set_vel2D(self.linearVel, 0, 2.0, angular_vel)
+            self.set_vel2D(linearVel, 0, MAX_Z, angularVel)
 
             self.vel_timestamps.append(time.time())
-
             self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
         return
     
 
 def main(args=None):
-    height = 2.0
-
     rclpy.init(args=args)
 
+    # Controller node
     drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True)
-    drone.take_off_process(height)
-
+    
+     # Takes offf
+    drone.take_off_process(MAX_Z)
     time.sleep(1)
+
+    # Starts the flight
     rclpy.spin(drone)
-        
 
-
+    
+    # End of execution
     drone.destroy_node()
 
     try:

@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 
 def save_timestamps(file_path, timestamps):
     np.save(file_path, timestamps)
@@ -35,30 +36,16 @@ def search_bottom_line(image):
 
 
 def band_midpoint(image, topw, bottomW):
-    img_width = image.shape[1]
-    img_height = image.shape[0]
+    img_roi = image[topw:bottomW, :]
+    non_zero_pixels = cv2.findNonZero(img_roi)
 
-    x = 0
-    y = 0
-    count = 0
-
-    # Checks the image limits
-    init = max(topw, 0)
-    end = min(bottomW, img_height-1)
-
-    for row in range(init, end):
-        for col in range(img_width):
-
-            comparison = image[row][col] != 0
-            if comparison.all():
-                y += row
-                x += col 
-                count += 1
-
-    if count == 0:
+    if non_zero_pixels is None:
         return (0, 0)
 
-    return [int(x / count), int(y / count)]
+    centroid = np.mean(non_zero_pixels, axis=0)
+    centroid = centroid.flatten().astype(int)
+
+    return centroid.tolist()
 
 class PID:
     def __init__(self, min, max):
@@ -67,6 +54,7 @@ class PID:
 
         self.prev_error = 0
         self.int_error = 0
+        
         # Angular values as default
         self.KP = 1.0
         self.KD = 0.0
