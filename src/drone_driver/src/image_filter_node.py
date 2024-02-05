@@ -54,22 +54,23 @@ class imageFilterNode(Node):
         save_profiling('./profiling_image.txt', self.profiling)
 
 
-    def show_trace(self, label1, label2, mono_img, original):
-        rgb_image = cv2.cvtColor(mono_img, cv2.COLOR_GRAY2RGB)
-        height, width, channels = rgb_image.shape
+    def show_trace(self, label, mono_img, original):
 
-        top_point = search_top_line(rgb_image)
-        bottom_point = search_bottom_line(rgb_image)
+        top_point = search_top_line(mono_img)
+        bottom_point = search_bottom_line(mono_img)
 
         red_farest = band_midpoint(mono_img, top_point, top_point + LIMIT_UMBRAL)
-        red_nearest = band_midpoint(mono_img, bottom_point-LIMIT_UMBRAL, bottom_point)
+        red_nearest = band_midpoint(mono_img, bottom_point - LIMIT_UMBRAL, bottom_point)
 
-        cv2.circle(rgb_image, red_nearest, RADIUS, TRACE_COLOR, RADIUS)
-        cv2.circle(rgb_image, red_farest, RADIUS, TRACE_COLOR, RADIUS)
-        cv2.line(rgb_image, (width // 2, 0), (width // 2, height), (255, 0, 0), 1)
+        # Convertir la imagen monocromática a 3 canales
+        mono_img_color = cv2.merge([mono_img, mono_img, mono_img])
 
-        # cv2.imshow(label1, rgb_image)
-        cv2.imshow(label2, original)
+        # Dibujar los puntos en verde en la imagen original
+        cv2.circle(mono_img_color, (red_farest[0], top_point), 5, (0, 255, 0), -1)  # Punto farest en verde
+        cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1)  # Punto nearest en verde
+
+        # Mostrar la imagen original con los puntos verdes
+        cv2.imshow(label, mono_img_color)
         cv2.waitKey(1)
 
     def color_filter(self, image):
@@ -142,7 +143,7 @@ class imageFilterNode(Node):
         # Traces
 
         # Display the image with contours
-        self.show_trace("Countors: ", "Original:", mono_img, img)
+        self.show_trace("Countors: ", mono_img, img)
 
 
 

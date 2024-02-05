@@ -196,8 +196,14 @@ class droneController(DroneInterface):
         return anguarVel
     
     def get_linear_vel(self, angularVel):
-        error = MAX_LINEAR -  np.interp(abs(angularVel), (0, MAX_ANGULAR), (0, MAX_LINEAR-MIN_LINEAR))
-        linearVel = self.linear_pid.get_pid(error)
+        width_center = self.cv_image.shape[1] / 2
+
+        top_point = search_top_line(self.cv_image)
+        farestPoint = band_midpoint(self.cv_image, top_point, top_point + LIMIT_UMBRAL)
+
+        pixelError = width_center - farestPoint[0]
+        linearError = MAX_LINEAR - np.interp(abs(pixelError), (0, width_center), (0, MAX_LINEAR-MIN_LINEAR))
+        linearVel = self.linear_pid.get_pid(linearError)
 
         return linearVel 
 
