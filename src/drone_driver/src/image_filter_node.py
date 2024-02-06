@@ -18,8 +18,8 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling
-from droneExpertPilot import LIMIT_UMBRAL
+from include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling, search_farest_column
+from droneExpertPilot import BOTTOM_LIMIT_UMBRAL, UPPER_LIMIT_UMBRAL
 
 
 
@@ -55,12 +55,12 @@ class imageFilterNode(Node):
 
 
     def show_trace(self, label, mono_img, original):
-
+        distancePoint = search_farest_column(mono_img)
         top_point = search_top_line(mono_img)
         bottom_point = search_bottom_line(mono_img)
 
-        red_farest = band_midpoint(mono_img, top_point, top_point + LIMIT_UMBRAL)
-        red_nearest = band_midpoint(mono_img, bottom_point - LIMIT_UMBRAL, bottom_point)
+        red_farest = band_midpoint(mono_img, top_point, top_point + UPPER_LIMIT_UMBRAL)
+        red_nearest = band_midpoint(mono_img, bottom_point - BOTTOM_LIMIT_UMBRAL, bottom_point)
 
         # Convertir la imagen monocromática a 3 canales
         mono_img_color = cv2.merge([mono_img, mono_img, mono_img])
@@ -68,7 +68,7 @@ class imageFilterNode(Node):
         # Dibujar los puntos en verde en la imagen original
         cv2.circle(mono_img_color, (red_farest[0], top_point), 5, (0, 255, 0), -1)  # Punto farest en verde
         cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1)  # Punto nearest en verde
-
+        cv2.circle(mono_img_color, (distancePoint, top_point), 5, (255, 0, 0), -1)  # Punto farest en verde
         # Mostrar la imagen original con los puntos verdes
         cv2.imshow(label, mono_img_color)
         cv2.waitKey(1)

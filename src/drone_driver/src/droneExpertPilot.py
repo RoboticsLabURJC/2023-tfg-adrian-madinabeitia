@@ -15,25 +15,27 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
+from include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling, search_farest_column
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360
 
 # Image parameters
-LIMIT_UMBRAL = 40
+BOTTOM_LIMIT_UMBRAL = 40
+UPPER_LIMIT_UMBRAL = 10
 UPPER_PROPORTION = 0.6
 LOWER_PROPORTION = 0.4
+BREAK_INCREMENT = 0.6
 
 # Vel control
-MAX_ANGULAR = 1.5
-MAX_LINEAR = 5.0
+MAX_ANGULAR = 3.0
+MAX_LINEAR = 6.0
 MIN_LINEAR = 2.5
 MAX_Z = 2.0
 
 ## PID controlers
-ANG_KP = 3.0
-ANG_KD = 2.75
+ANG_KP = 2.0
+ANG_KD = 1.75
 ANG_KI = 0.0
 
 Z_KP = 0.5
@@ -41,7 +43,7 @@ Z_KD = 0.45
 Z_KI = 0.0
 
 LIN_KP = 1.0
-LIN_KD = 2.0
+LIN_KD = 1.20
 LIN_KI = 0.0
 
 
@@ -169,51 +171,48 @@ class droneController(DroneInterface):
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
     
-    def get_angular_vel(self):
-        getAngTime = time.time()
-        if self.cv_image is None:
-            return 0.0
-        
-        width_center = self.cv_image.shape[1] / 2
-
-        # Searchs limits of the line
-        top_point = search_top_line(self.cv_image)
-        bottom_point = search_bottom_line(self.cv_image)
-
-        # Searchs the reference points
-        red_farest = band_midpoint(self.cv_image, top_point, top_point + LIMIT_UMBRAL)
-        red_nearest = band_midpoint(self.cv_image, bottom_point-LIMIT_UMBRAL, bottom_point)
+    def get_angular_vel(self, farestPoint, nearestPoint):      
+        widthCenter = self.cv_image.shape[1] / 2
 
         # Gets the angular error                    
-        angular_distance = (width_center - red_farest[0])*UPPER_PROPORTION + (width_center - red_nearest[0])*LOWER_PROPORTION
-        # angular_distance = (width_center - red_farest[0])
+        angularError = (widthCenter - farestPoint[0])*UPPER_PROPORTION + (widthCenter - nearestPoint[0])*LOWER_PROPORTION
 
         # Pixel distance to angular vel transformation
-        angular = (((angular_distance - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
+        angular = (((angularError - MIN_PIXEL) * self.ang_rang) / self.px_rang) + (-MAX_ANGULAR)
         anguarVel = self.angular_pid.get_pid(angular)
 
-        self.profiling.append(f"\nGet angular time= {time.time() - getAngTime}")
         return anguarVel
     
-    def get_linear_vel(self, angularVel):
-        width_center = self.cv_image.shape[1] / 2
+    def get_linear_vel(self, farestPoint):
+        widthCenter = self.cv_image.shape[1] / 2
 
-        top_point = search_top_line(self.cv_image)
-        farestPoint = band_midpoint(self.cv_image, top_point, top_point + LIMIT_UMBRAL)
-
-        pixelError = width_center - farestPoint[0]
-        linearError = MAX_LINEAR - np.interp(abs(pixelError), (0, width_center), (0, MAX_LINEAR-MIN_LINEAR))
+        pixelError = max(widthCenter, farestPoint) - min(widthCenter, farestPoint)
+        self.get_logger().info("Pixel error = %f" % (pixelError))
+        error = np.interp(abs(pixelError), (0, widthCenter), (0, MAX_LINEAR-MIN_LINEAR))
+        linearError = MAX_LINEAR - error * BREAK_INCREMENT
         linearVel = self.linear_pid.get_pid(linearError)
 
         return linearVel 
 
     def timer_callback(self):
-        if self.info['state'] == PlatformStatus.FLYING:
+        if self.info['state'] == PlatformStatus.FLYING and self.cv_image is not None:
             initTime = time.time()
 
+            # Gets the reference points
+            ## Farest point
+            topPoint = search_top_line(self.cv_image)
+            farestPoint = band_midpoint(self.cv_image, topPoint, topPoint + UPPER_LIMIT_UMBRAL)
+
+            # Nearest point
+            bottomPoint = search_bottom_line(self.cv_image)
+            nearestPoint = band_midpoint(self.cv_image, bottomPoint-BOTTOM_LIMIT_UMBRAL, bottomPoint)
+
+            # Distance point
+            distancePoint = search_farest_column(self.cv_image)
+
             # Gets drone velocitys
-            angularVel = self.get_angular_vel()
-            linearVel = self.get_linear_vel(angularVel)
+            angularVel = self.get_angular_vel(farestPoint, nearestPoint)
+            linearVel = self.get_linear_vel(distancePoint)
             self.get_logger().info("Angular vel = %f || Linear vel = %f" % (angularVel, linearVel))
 
             # Set the velocity

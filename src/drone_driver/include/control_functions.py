@@ -23,6 +23,30 @@ def search_top_line(image):
     return first_nonzero_row
 
 
+def search_farest_column(image):
+    img_width = image.shape[1]
+    center_col = img_width // 2  # Calcula el índice del centro de la imagen
+
+    # Busca la primera columna no nula
+    first_nonzero_column = 0
+    for col in range(img_width):
+        if np.any(image[:, col] != 0):
+            first_nonzero_column = col
+            break
+
+    # Busca la última columna no nula
+    last_nonzero_column = 0
+    for col in range(img_width - 1, -1, -1):
+        if np.any(image[:, col] != 0):
+            last_nonzero_column = col
+            break
+    
+    # Determina cuál de las dos columnas está más lejos del centro
+    if abs(first_nonzero_column - center_col) > abs(last_nonzero_column - center_col):
+        return first_nonzero_column
+    else:
+        return last_nonzero_column
+
 def search_bottom_line(image):
     img_height = image.shape[0]
     last_nonzero_row = img_height - 1  # Start from the bottom
