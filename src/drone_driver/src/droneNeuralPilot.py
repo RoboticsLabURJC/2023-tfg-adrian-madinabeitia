@@ -186,17 +186,17 @@ class droneNeuralController(DroneInterface):
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
     
-    def get_angular_vel(self):
+    def get_vels(self):
         initTime = time.time()
-        angular_vel = 0.0
+        vels = (0, 0)
 
         # Angular inference for neural network
         if self.imageTensor is not None:
-            angular_vel = self.model(self.imageTensor) / 10
-            print(angular_vel)
+            vels = self.model(self.imageTensor)
+            vels[1] = vels[1] / 10
 
         self.profiling.append(f"\nAngular inference = {time.time() - initTime}")
-        return angular_vel
+        return vels
 
 
     def timer_callback(self):
@@ -204,11 +204,11 @@ class droneNeuralController(DroneInterface):
             initTime = time.time()
 
             # Gets drone velocitys
-            angular_vel = self.get_angular_vel()
-            self.get_logger().info("Angular inference = %f" % angular_vel)
+            vels = self.get_vels()
+            self.get_logger().info("Angular inference = %f  | Linear inference = %f" % (vels[0], vels[1]))
 
             # Set the velocity
-            self.set_vel2D(self.linearVel, 0, MAX_Z, angular_vel)
+            self.set_vel2D(vels[0], 0, MAX_Z, vels[1])
 
             # Profiling
             self.vel_timestamps.append(time.time())

@@ -77,7 +77,7 @@ def get_vels(folder_path):
                 content = file.read()
                 numbers = [float(num) for num in content.split(',')]
 
-                vels.append([numbers[1]*10])
+                vels.append([numbers[0], numbers[1]*10])
 
     except FileNotFoundError:
         print("Error: Carpeta no encontrada.")
@@ -151,6 +151,7 @@ class rosbagDataset(Dataset):
         )
 
         self.dataset = balanced_dataset
+
         return balanced_dataset
 
 

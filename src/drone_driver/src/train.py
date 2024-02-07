@@ -51,6 +51,7 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
 
     train_loader = DataLoader(dataset, batch_size=50, shuffle=True)
 
+    print("Starting training")
     for epoch in range(30):
 
         for i, data in enumerate(train_loader, 0):

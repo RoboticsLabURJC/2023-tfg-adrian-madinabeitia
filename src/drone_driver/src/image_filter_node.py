@@ -143,7 +143,7 @@ class imageFilterNode(Node):
         # Traces
 
         # Display the image with contours
-        self.show_trace("Countors: ", mono_img, img)
+        # self.show_trace("Countors: ", mono_img, img)
 
 
 

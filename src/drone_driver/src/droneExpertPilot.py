@@ -187,7 +187,7 @@ class droneController(DroneInterface):
         widthCenter = self.cv_image.shape[1] / 2
 
         pixelError = max(widthCenter, farestPoint) - min(widthCenter, farestPoint)
-        self.get_logger().info("Pixel error = %f" % (pixelError))
+
         error = np.interp(abs(pixelError), (0, widthCenter), (0, MAX_LINEAR-MIN_LINEAR))
         linearError = MAX_LINEAR - error * BREAK_INCREMENT
         linearVel = self.linear_pid.get_pid(linearError)
@@ -213,7 +213,7 @@ class droneController(DroneInterface):
             # Gets drone velocitys
             angularVel = self.get_angular_vel(farestPoint, nearestPoint)
             linearVel = self.get_linear_vel(distancePoint)
-            self.get_logger().info("Angular vel = %f || Linear vel = %f" % (angularVel, linearVel))
+            #self.get_logger().info("Angular vel = %f || Linear vel = %f" % (angularVel, linearVel))
 
             # Set the velocity
             # self.set_vel(self.linearVel, 0, 0, anguarVel)
