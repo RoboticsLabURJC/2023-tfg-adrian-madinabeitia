@@ -15,7 +15,7 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling, search_farest_column
+from include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling, search_farthest_column
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360
@@ -70,9 +70,13 @@ class droneController(DroneInterface):
         self.ang_rang = MAX_ANGULAR - (- MAX_ANGULAR)
         self.linearVel = MAX_LINEAR
 
-        timer_period = 0.01  # seconds
-        self.timer = self.create_timer(timer_period, self.timer_callback)
+        # Create timers
+        self.timer = self.create_timer(0.1, self.timer_callback)
+
         self.saver = self.create_timer(5.0, self.save_data)
+
+
+        #self.timer.
 
         # Frequency analysis 
         self.image_timestamps = []
@@ -98,6 +102,7 @@ class droneController(DroneInterface):
         
 
     def retry_command(self, command, check_func, sleep_time=1.0, max_retries=1):
+        
         if not check_func():
             command()
             count = 0
@@ -115,7 +120,7 @@ class droneController(DroneInterface):
                 self.get_logger().info("Command failed")
     
 
-    def take_off_process(self, takeoff_height):
+    def take_off_process(self):
         self.get_logger().info("Start mission")
 
         ##### ARM OFFBOARD #####
@@ -128,10 +133,12 @@ class droneController(DroneInterface):
 
         ##### TAKE OFF #####
         self.get_logger().info("Take Off")
-        self.takeoff(takeoff_height, speed=1.0)
+        self.takeoff(2.0, speed=1.0)
         while not self.info['state'] == PlatformStatus.FLYING:
             time.sleep(0.5)
 
+
+        self.get_logger().info("Estado del temporizador: %s" % ("Listo" if self.timer.is_ready() else "No listo"))
         self.get_logger().info("Following line")
 
     
@@ -208,7 +215,7 @@ class droneController(DroneInterface):
             nearestPoint = band_midpoint(self.cv_image, bottomPoint-BOTTOM_LIMIT_UMBRAL, bottomPoint)
 
             # Distance point
-            distancePoint = search_farest_column(self.cv_image)
+            distancePoint = search_farthest_column(self.cv_image)
 
             # Gets drone velocitys
             angularVel = self.get_angular_vel(farestPoint, nearestPoint)
@@ -221,7 +228,7 @@ class droneController(DroneInterface):
 
             self.vel_timestamps.append(time.time())
             self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
-        return
+        self.get_logger().info("Land donaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae")
     
 
 def main(args=None):
@@ -230,14 +237,12 @@ def main(args=None):
     # Controller node
     drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True)
     
-     # Takes offf
-    drone.take_off_process(MAX_Z)
-    time.sleep(1)
+    # Takes off
+    drone.take_off_process()
 
-    # Starts the flight
+    # Start the flight
     rclpy.spin(drone)
 
-    
     # End of execution
     drone.destroy_node()
 
@@ -247,14 +252,11 @@ def main(args=None):
 
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
-    
-    exit()
 
+    exit()
 
 if __name__ == '__main__':
     main()
-
-
 
 
 

@@ -192,7 +192,7 @@ class droneNeuralController(DroneInterface):
 
         # Angular inference for neural network
         if self.imageTensor is not None:
-            vels = self.model(self.imageTensor)
+            vels = self.model(self.imageTensor)[0]
             vels[1] = vels[1] / 10
 
         self.profiling.append(f"\nAngular inference = {time.time() - initTime}")

@@ -18,7 +18,7 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling, search_farest_column
+from include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling, search_farthest_column
 from droneExpertPilot import BOTTOM_LIMIT_UMBRAL, UPPER_LIMIT_UMBRAL
 
 
@@ -55,7 +55,7 @@ class imageFilterNode(Node):
 
 
     def show_trace(self, label, mono_img, original):
-        distancePoint = search_farest_column(mono_img)
+        distancePoint = search_farthest_column(mono_img)
         top_point = search_top_line(mono_img)
         bottom_point = search_bottom_line(mono_img)
 
@@ -143,7 +143,7 @@ class imageFilterNode(Node):
         # Traces
 
         # Display the image with contours
-        # self.show_trace("Countors: ", mono_img, img)
+        self.show_trace("Countors: ", mono_img, img)
 
 
 

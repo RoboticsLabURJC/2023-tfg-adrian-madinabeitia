@@ -116,12 +116,26 @@ class rosbagDataset(Dataset):
         return subsampled
     
     def getSubset(self, dataset, lower_bound, upper_bound):
-        return [(img, vel) for img, vel in dataset if lower_bound <= vel[0]/10 < upper_bound]
+        angularSub = [(img, vel) for img, vel in dataset if lower_bound <= vel[1]/10 < upper_bound]
+        
+        linear1 = [(img, vel) for img, vel in angularSub if vel[0] < 4.5]
+        linear2 = [(img, vel) for img, vel in angularSub if 4.5 <= vel[0] < 5]
+        linear3 = [(img, vel) for img, vel in angularSub if 5 <= vel[0] < 6]
+        print(len(angularSub), len(linear1), len(linear2), len(linear3))
+        return [linear1, linear2, linear3]
 
     def oversample(self, label, max_count):
         return list(islice(cycle(label), max_count))
     
     def balancedDataset(self):
+        balanced_dataset = []
+        #          -0.5  -0.25  -0.0   0.0  0.25   0.5    
+        weights = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),    # 4.0
+                   (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),    # 4.5
+                   (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]    # 5.0
+
+
+        # Gets all the subsets
         label3 = self.getSubset(self.dataset, 0.5, float('inf'))
         label2 = self.getSubset(self.dataset, 0.25, 0.5)
         label1 = self.getSubset(self.dataset, 0.0, 0.25)
@@ -129,64 +143,38 @@ class rosbagDataset(Dataset):
         label_2 = self.getSubset(self.dataset, -0.5, -0.25)
         label_3 = self.getSubset(self.dataset, float('-inf'), -0.5)
 
-        max_count = max(len(label3), len(label2), len(label1), len(label_1), len(label_2), len(label_3))
+        # Balances all the clases
+        for i in range(3):
+            max_count = max(len(label3[i]), len(label2[i]), len(label1[i]), 
+                            len(label_1[i]), len(label_2[i]), len(label_3[i]))
+            
+            label3_oversampled = self.oversample(label3[i], max_count)
+            label2_oversampled = self.oversample(label2[i], max_count)
+            label1_oversampled = self.oversample(label1[i], max_count)
+            label_1_oversampled = self.oversample(label_1[i], max_count)
+            label_2_oversampled = self.oversample(label_2[i], max_count)
+            label_3_oversampled = self.oversample(label_3[i], max_count)
 
-        # Sobremuestrear cada clase
-        label3_oversampled = self.oversample(label3, max_count)
-        label2_oversampled = self.oversample(label2, max_count)
-        label1_oversampled = self.oversample(label1, max_count)
-        label_1_oversampled = self.oversample(label_1, max_count)
-        label_2_oversampled = self.oversample(label_2, max_count)
-        label_3_oversampled = self.oversample(label_3, max_count)
+            # Subsamples and adjust with the weights all the clases
+            label_3_oversampled = self.subSample(label_3_oversampled, weights[i][0])
+            label_2_oversampled = self.subSample(label_2_oversampled, weights[i][1])
+            label_1_oversampled = self.subSample(label_1_oversampled, weights[i][2])
+            label1_oversampled = self.subSample(label1_oversampled, weights[i][3])
+            label2_oversampled = self.subSample(label2_oversampled, weights[i][4])
+            label3_oversampled = self.subSample(label3_oversampled, weights[i][5])
 
-        label3_oversampled = self.subSample(label3_oversampled, 0.10)
-        label_3_oversampled = self.subSample(label_3_oversampled, 0.10)
-        label2_oversampled = self.subSample(label2_oversampled, 0.10)
-        label_2_oversampled = self.subSample(label_2_oversampled, 0.10)
-
-        # Crear un conjunto de datos balanceado
-        balanced_dataset = (
-            label3_oversampled + label2_oversampled + label1_oversampled +
-            label_1_oversampled + label_2_oversampled + label_3_oversampled
-        )
-
+            # Crear un conjunto de datos balanceado
+            balancedSubSet = (
+                label3_oversampled + label2_oversampled + label1_oversampled +
+                label_1_oversampled + label_2_oversampled + label_3_oversampled
+            )
+            balanced_dataset.extend(balancedSubSet)
         self.dataset = balanced_dataset
 
         return balanced_dataset
-
-
-
-
-def plotContinuousGraphic(label, vels, color, subplot):
-    plt.subplot(2, 1, subplot)
-    plt.plot(vels, label=label, linestyle=' ', marker='o', markersize=3, color=color)
-    plt.xlabel('Sample')
-    plt.ylabel('vel ' + label)
-    plt.title("vel " + label)
-
 
 
 dataset_transforms = transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize([66, 200]),
 ])
-
-
-#################################################################
-# Data analysis for training                                    #
-#################################################################
-
-
-def main():
-    dataset = rosbagDataset(DATA_PATH, dataset_transforms)
-
-    vels = [velocitys for image, velocitys in dataset.dataset]
-    images = [image for image, velocitys in dataset.dataset]
-
-    print("** Image len = ", len(images), "    Vel len = ", len(vels))
-
-
-
-
-if __name__ == "__main__":
-    main()
