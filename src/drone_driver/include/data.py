@@ -19,9 +19,9 @@ import random
 from torch.utils.data import Dataset
 import os
 from PIL import Image
-import time
-from itertools import cycle, islice
 
+ANGULAR_UMBRALS = [-0.5, -0.25, 0, 0.25, 0.5, float('inf')]  # label < umbral
+LINEAR_UMBRALS = [4, 5, float('inf')]
 
 DATA_PATH = "../training_dataset"
 LOWER_LIMIT = 0
@@ -95,9 +95,6 @@ class rosbagDataset(Dataset):
         self.dataset = [(self.imgData[i], self.velData[i]) for i in range(len(self.velData))]
        
 
-
-
-
     def __len__(self):
         return len(self.velData)
 
@@ -114,64 +111,83 @@ class rosbagDataset(Dataset):
         subsampled = random.sample(label, len(label) - toDel)
 
         return subsampled
-    
-    def getSubset(self, dataset, lower_bound, upper_bound):
-        angularSub = [(img, vel) for img, vel in dataset if lower_bound <= vel[1]/10 < upper_bound]
-        
-        linear1 = [(img, vel) for img, vel in angularSub if vel[0] < 4.5]
-        linear2 = [(img, vel) for img, vel in angularSub if 4.5 <= vel[0] < 5]
-        linear3 = [(img, vel) for img, vel in angularSub if 5 <= vel[0] < 6]
-        print(len(angularSub), len(linear1), len(linear2), len(linear3))
-        return [linear1, linear2, linear3]
 
-    def oversample(self, label, max_count):
-        return list(islice(cycle(label), max_count))
+    def getLinearSubset(self, dataset, lowerBound, upperBound):
+        linearSub = [(img, vel) for img, vel in dataset if lowerBound < vel[0] <= upperBound]
+
+        return linearSub
+    
+    def getAngularSubset(self, dataset, lowerBound, upperBound):
+        angularSub = [(img, vel) for img, vel in dataset if lowerBound < vel[1]/10 <= upperBound]
+
+        # Gets the linear subsets
+        angularLabeled = [self.getLinearSubset(angularSub, float('-inf'), LINEAR_UMBRALS[0])]
+
+        for i in range(0, len(LINEAR_UMBRALS) - 1):
+            angularLabeled.append(self.getLinearSubset(angularSub, LINEAR_UMBRALS[i], LINEAR_UMBRALS[i+1]))
+
+        return angularLabeled
+
     
     def balancedDataset(self):
-        balanced_dataset = []
-        #          -0.5  -0.25  -0.0   0.0  0.25   0.5    
-        weights = [(0.0, 0.0, 0.0, 0.0, 0.0, 0.0),    # 4.0
-                   (0.0, 0.0, 0.0, 0.0, 0.0, 0.0),    # 4.5
-                   (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)]    # 5.0
+        #   <       4.5   5   inf
+        weights = [(0.5, 0.0, 0.0),     # < -0.5
+                   (0.5, 0.0, 0.0),     # < -0.25
+                   (0.5, 0.0, 0.0),     # < 0
+                   (0.5, 0.0, 0.0),     # < 0.25
+                   (0.5, 0.0, 0.0),     # < 0.5
+                   (0.5, 0.0, 0.0)]     # < inf
 
 
         # Gets all the subsets
-        label3 = self.getSubset(self.dataset, 0.5, float('inf'))
-        label2 = self.getSubset(self.dataset, 0.25, 0.5)
-        label1 = self.getSubset(self.dataset, 0.0, 0.25)
-        label_1 = self.getSubset(self.dataset, -0.25, 0.0)
-        label_2 = self.getSubset(self.dataset, -0.5, -0.25)
-        label_3 = self.getSubset(self.dataset, float('-inf'), -0.5)
+        labeledDataset = [self.getAngularSubset(self.dataset, float('-inf'), ANGULAR_UMBRALS[0])]
+        
+        for i in range(0, len(ANGULAR_UMBRALS) - 1):
+            labeledDataset.append(self.getAngularSubset(self.dataset, ANGULAR_UMBRALS[i], ANGULAR_UMBRALS[i+1]))
+
+        # Gets the max number of samples in a label
+        maxSamples = 0
+        
+        for angLabeled in labeledDataset:
+            for linLabeled in angLabeled:
+                if len(linLabeled) > maxSamples:
+                    maxSamples = len(linLabeled)
 
         # Balances all the clases
-        for i in range(3):
-            max_count = max(len(label3[i]), len(label2[i]), len(label1[i]), 
-                            len(label_1[i]), len(label_2[i]), len(label_3[i]))
+        balancedDataset = []
+
+        for i, angLabeled in enumerate(labeledDataset):
+            balancedAngLabeled = []
             
-            label3_oversampled = self.oversample(label3[i], max_count)
-            label2_oversampled = self.oversample(label2[i], max_count)
-            label1_oversampled = self.oversample(label1[i], max_count)
-            label_1_oversampled = self.oversample(label_1[i], max_count)
-            label_2_oversampled = self.oversample(label_2[i], max_count)
-            label_3_oversampled = self.oversample(label_3[i], max_count)
+            for j in range(len(angLabeled)):
+                currentSubset = angLabeled[j]
+                currentSubsetLen = len(currentSubset)
+                
+                if currentSubsetLen < maxSamples:
+                    # If the current length is less than maxSamples, we replicate the elements
+                    repetitions = maxSamples // currentSubsetLen
+                    remainder = maxSamples % currentSubsetLen
+                    balancedSubset = currentSubset * repetitions + currentSubset[:remainder]
+                else:
+                    # If the current length is greater than or equal to maxSamples, we subsample
+                    balancedSubset = random.sample(currentSubset, maxSamples)
+                
+                # Adjusts to weights
+                balancedSubset = self.subSample(balancedSubset, weights[i][j])
+                balancedAngLabeled.append(balancedSubset)
+            
+            balancedDataset.append(balancedAngLabeled)
 
-            # Subsamples and adjust with the weights all the clases
-            label_3_oversampled = self.subSample(label_3_oversampled, weights[i][0])
-            label_2_oversampled = self.subSample(label_2_oversampled, weights[i][1])
-            label_1_oversampled = self.subSample(label_1_oversampled, weights[i][2])
-            label1_oversampled = self.subSample(label1_oversampled, weights[i][3])
-            label2_oversampled = self.subSample(label2_oversampled, weights[i][4])
-            label3_oversampled = self.subSample(label3_oversampled, weights[i][5])
+        # Raw dataset
+        rawDataset = []
 
-            # Crear un conjunto de datos balanceado
-            balancedSubSet = (
-                label3_oversampled + label2_oversampled + label1_oversampled +
-                label_1_oversampled + label_2_oversampled + label_3_oversampled
-            )
-            balanced_dataset.extend(balancedSubSet)
-        self.dataset = balanced_dataset
+        for angLabeled in balancedDataset:
+            for linLabeled in angLabeled:
+                for data in linLabeled:
+                    rawDataset.append(data)
 
-        return balanced_dataset
+
+        return rawDataset
 
 
 dataset_transforms = transforms.Compose([

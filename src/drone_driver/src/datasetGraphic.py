@@ -9,7 +9,8 @@ from ament_index_python.packages import get_package_share_directory
 package_path = get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.data import rosbagDataset, DATA_PATH, dataset_transforms
+from include.data import rosbagDataset, DATA_PATH, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
+
 
 
 def plot_3d_bars(x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
@@ -38,44 +39,34 @@ def getLabelDistribution(labels):
 
     # Counts the number of labels of each type
     for i in range(len(labels)):
-        totalAngVels[labels[i][1], labels[i][0]] += 1
+        totalAngVels[labels[i][0], labels[i][1]] += 1
 
     return totalAngVels
 
 
 def vel2label(lineal, angular):
-    label = [0, 0]
 
-    # Clasifies angular vels
-    if angular >= 0.50:
-        label[0] = 5
+    linLabel = 0
+    angLabel = 0
+    # Gets the lineal label
+    if lineal < LINEAR_UMBRALS[0]:
+        linLabel = 0
 
-    elif angular >= 0.25:
-        label[0] = 4
+    for i in range(len(LINEAR_UMBRALS) - 1):
+        if LINEAR_UMBRALS[i] < lineal <= LINEAR_UMBRALS[i+1]:
+            linLabel = i + 1
+            break
 
-    elif angular >= 0:
-        label[0] = 3
+    if angular < ANGULAR_UMBRALS[0]:
+        angLabel = 0
 
-    elif angular >= -0.25:
-        label[0] = 2
-
-    elif angular >= -0.5:
-        label[0] = 1
-        
-    else:
-        label[0] = 0
-
-    # Clasifies linear vels
-    if lineal >= 5.5:
-        label[1] = 2
+    # Gets the  angular label
+    for j in range(len(ANGULAR_UMBRALS) - 1):
+        if ANGULAR_UMBRALS[j] < angular <= ANGULAR_UMBRALS[j+1]:
+            angLabel = j + 1
+            break
     
-    elif lineal >= 4:
-        label[1] = 1
-
-    else:
-        label[1] = 0
-
-    return label
+    return [linLabel, angLabel]
 
 def get_labels(vels):
     
@@ -93,24 +84,25 @@ def main():
     
     # Gets the dataset
     data = rosbagDataset(DATA_PATH, dataset_transforms)
-    vels = [velocitys for image, velocitys in data.dataset]
-    labels = get_labels(vels)
-    
+    # vels = [velocitys for image, velocitys in data.dataset]
+    # labels = get_labels(vels)
     # Bars height = Number of samples
-    z = getLabelDistribution(labels)
+    # z = getLabelDistribution(labels)
 
     # Graphics
     xLabel = 'Angular vel'
     yLabel = 'Linear vel'
     zLabel = 'Samples'
 
-    plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
+    # plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
 
-    ## Plots the balanced data
-    # Plots the balanced data
+    # ## Plots the balanced data
+    # # Plots the balanced data
     balancedDataset = data.balancedDataset()
+
     vels = [velocitys for image, velocitys in balancedDataset]
     labels = get_labels(vels)
+
     
     # Bars height = Number of samples
     z = getLabelDistribution(labels)
