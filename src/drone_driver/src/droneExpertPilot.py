@@ -224,11 +224,11 @@ class droneController(DroneInterface):
 
             # Set the velocity
             # self.set_vel(self.linearVel, 0, 0, anguarVel)
+            self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
             self.set_vel2D(linearVel, 0, MAX_Z, angularVel)
 
             self.vel_timestamps.append(time.time())
             self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
-        self.get_logger().info("Land donaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaae")
     
 
 def main(args=None):

@@ -9,9 +9,9 @@ from ament_index_python.packages import get_package_share_directory
 package_path = get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.data import rosbagDataset, DATA_PATH, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
+from include.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
 
-
+DATA_PATH = "../../training_dataset"
 
 def plot_3d_bars(x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
     # Create the figure and 3D axes
@@ -35,7 +35,7 @@ def plot_3d_bars(x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
 
 
 def getLabelDistribution(labels):
-    totalAngVels = np.zeros((3, 6), dtype=int)
+    totalAngVels = np.zeros((len(LINEAR_UMBRALS), len(ANGULAR_UMBRALS)), dtype=int)
 
     # Counts the number of labels of each type
     for i in range(len(labels)):
@@ -79,22 +79,24 @@ def get_labels(vels):
 
 def main():
     # Data for the columns 
-    x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
-    y = np.array([4, 4, 4, 4, 4, 4])
+    x = np.array([-0.75, -0.5, -0.25, -0.05, 0.05, 0.25, 0.5, 0.75])
+    y = np.array([4, 4, 4, 4, 4, 4, 4, 4])
     
     # Gets the dataset
     data = rosbagDataset(DATA_PATH, dataset_transforms)
-    # vels = [velocitys for image, velocitys in data.dataset]
-    # labels = get_labels(vels)
+    vels = [velocitys for image, velocitys in data.dataset]
+    labels = get_labels(vels)
+
     # Bars height = Number of samples
-    # z = getLabelDistribution(labels)
+    z = getLabelDistribution(labels)
 
     # Graphics
     xLabel = 'Angular vel'
     yLabel = 'Linear vel'
     zLabel = 'Samples'
+    title = "Num samples = " + str(len(vels))
 
-    # plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
+    plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title=title)
 
     # ## Plots the balanced data
     # # Plots the balanced data
@@ -106,8 +108,9 @@ def main():
     
     # Bars height = Number of samples
     z = getLabelDistribution(labels)
+    title = "Num samples = " + str(len(vels))
 
-    plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title='Simple circuit')
+    plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title=title)
 
 if __name__ == "__main__":
     main()

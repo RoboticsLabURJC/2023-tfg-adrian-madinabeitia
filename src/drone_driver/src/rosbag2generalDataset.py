@@ -1,18 +1,11 @@
 #!/usr/bin/env python3
 
-## Links: https://stackoverflow.com/questions/73420147/how-to-read-custom-message-type-using-ros2bag
-
-#!/usr/bin/env python3
-
-# run with python filename.py -i rosbag_dir/
-# "../rosbagsCar/rosbag2_2023_10_09-11_50_46"
-## Links: https://stackoverflow.com/questions/73420147/how-to-read-custom-message-type-using-ros2bag
-
 from rosbags.rosbag2 import Reader as ROS2Reader
 from rosbags.serde import deserialize_cdr
 import numpy as np
 from torch.utils.data import Dataset
 import os
+import math
 import cv2
 
 
@@ -44,62 +37,67 @@ class rosbagDataset(Dataset):
             os.makedirs(img_folder_path, exist_ok=True)
             os.makedirs(labels_folder_path, exist_ok=True)
 
-            with ROS2Reader(rosbag_dir) as ros2_reader:
 
-                channels = 3  # Encoding = bgr8
-                ros2_conns = [x for x in ros2_reader.connections]
-                ros2_messages = ros2_reader.messages(connections=ros2_conns)
+            try:
+                with ROS2Reader(rosbag_dir) as ros2_reader:
 
-
-                # Generates all the mesaures of the topic
-                for m, msg in enumerate(ros2_messages):
-                    (connection, timestamp, rawdata) = msg
-
-                    # Checks if it is the velocities topic
-                    if connection.topic == vel_topic:
-                        data = deserialize_cdr(rawdata, connection.msgtype)
-                        linear = data.twist.linear.x
-                        angular = data.twist.angular.z
-
-                        # Checks the first timestamp
-                        if self.firstVelTimestamp == -1:
-                            self.firstVelTimestamp = timestamp
-
-                        if timestamp >= self.lastVelTimestamp and not self.asocciatedVel:
-                            # Save the data into a .txt
-                            output_path = os.path.join(labels_folder_path, f"{folderNum}_{m}.txt")
-                            with open(output_path, "w") as txt_file:
-                                txt_file.write(f"{linear}, {angular}\n")
-                            self.asocciatedImage = False
-
-                            self.lastImgTimestamp = timestamp
-                            self.asocciatedVel = True
+                    channels = 3  # Encoding = bgr8
+                    ros2_conns = [x for x in ros2_reader.connections]
+                    ros2_messages = ros2_reader.messages(connections=ros2_conns)
 
 
-                    # Checks if it is the image topic
-                    if connection.topic == img_topic:
-                        data = deserialize_cdr(rawdata, connection.msgtype)
+                    # Generates all the mesaures of the topic
+                    for m, msg in enumerate(ros2_messages):
+                        (connection, timestamp, rawdata) = msg
 
-                        # Converts the image into a readable format
-                        img = np.array(data.data, dtype=data.data.dtype)
-                        cvImage = img.reshape((data.height, data.width, channels))
+                        # Checks if it is the velocities topic
+                        if connection.topic == vel_topic:
+                            data = deserialize_cdr(rawdata, connection.msgtype)
+                            angular = data.twist.angular.z
 
-                        # Checks the first timestamp
-                        if self.firstImgTimestamp == -1:
-                            self.firstImgTimestamp = timestamp
+                            # Conversion global frame to local frame
+                            linear = data.twist.linear.x
 
-                        if timestamp >= self.lastImgTimestamp and not self.asocciatedImage:
-                            # Save the data into a .jpg
-                            output_path = os.path.join(img_folder_path, f"{folderNum}_{m}.jpg")
-                            resized = cv2.resize(cvImage, (160, 120))
-                            cv2.imwrite(output_path, cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
-                            
-                            self.asocciatedVel = False
+                            # Checks the first timestamp
+                            if self.firstVelTimestamp == -1:
+                                self.firstVelTimestamp = timestamp
 
-                            self.lastVelTimestamp = timestamp
-                            self.asocciatedImage = True
+                            if timestamp >= self.lastVelTimestamp and not self.asocciatedVel:
+                                # Save the data into a .txt
+                                output_path = os.path.join(labels_folder_path, f"{folderNum}_{m}.txt")
+                                with open(output_path, "w") as txt_file:
+                                    txt_file.write(f"{linear}, {angular}\n")
+                                self.asocciatedImage = False
+
+                                self.lastImgTimestamp = timestamp
+                                self.asocciatedVel = True
 
 
+                        # Checks if it is the image topic
+                        if connection.topic == img_topic:
+                            data = deserialize_cdr(rawdata, connection.msgtype)
+
+                            # Converts the image into a readable format
+                            img = np.array(data.data, dtype=data.data.dtype)
+                            cvImage = img.reshape((data.height, data.width, channels))
+
+                            # Checks the first timestamp
+                            if self.firstImgTimestamp == -1:
+                                self.firstImgTimestamp = timestamp
+
+                            if timestamp >= self.lastImgTimestamp and not self.asocciatedImage:
+                                # Save the data into a .jpg
+                                output_path = os.path.join(img_folder_path, f"{folderNum}_{m}.jpg")
+                                resized = cv2.resize(cvImage, (160, 120))
+                                cv2.imwrite(output_path, cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
+                                
+                                self.asocciatedVel = False
+
+                                self.lastVelTimestamp = timestamp
+                                self.asocciatedImage = True
+
+            except:
+                print("Folder", rosbag_dir , "is not a rosbag")
 
 
 #################################################################
@@ -111,7 +109,7 @@ def main():
     dataset = rosbagDataset(ROSBAGS_PATH)
 
     img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
-    vel_topic = "/drone0/motion_reference/twist"
+    vel_topic = "/drone0/self_localization/twist"
 
     dataset.transform_data(img_topic, vel_topic)
 

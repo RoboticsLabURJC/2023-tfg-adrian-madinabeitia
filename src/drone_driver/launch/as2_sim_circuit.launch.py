@@ -11,10 +11,10 @@ sim_time = "true"
 
 # world = "/montreal_line.world"
 # world = "/simple_circuit.world"
-world = "/montmelo_line.world"
+# world = "/montmelo_line.world"
 
 # Test world
-# world = "/nurburgring_line.world"
+world = "/nurburgring_line.world"
 
 
 env_vars = {
@@ -73,8 +73,8 @@ def generate_launch_description():
         arguments=[
             sim_config + '/world.json',
             worlds_dir + world,
-            #'0.0', '0.0', '0.0', '0.0'
-            '0.0', '0.0', '0.0', '3.14'
+            # '0.0', '0.0', '0.0', '0.0'
+            '0.0', '0.0', '0.0', '3.14' # 3.54
         ],
     )  
 

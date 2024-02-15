@@ -205,7 +205,7 @@ class droneNeuralController(DroneInterface):
 
             # Gets drone velocitys
             vels = self.get_vels()
-            self.get_logger().info("Angular inference = %f  | Linear inference = %f" % (vels[0], vels[1]))
+            self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (vels[0], vels[1]))
 
             # Set the velocity
             self.set_vel2D(vels[0], 0, MAX_Z, vels[1])

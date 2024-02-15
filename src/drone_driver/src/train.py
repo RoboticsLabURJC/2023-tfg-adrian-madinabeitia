@@ -49,10 +49,17 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
     dataset = rosbagDataset(DATA_PATH, dataset_transforms)
     dataset.balancedDataset()
 
-    train_loader = DataLoader(dataset, batch_size=50, shuffle=True)
+    train_loader = DataLoader(dataset, batch_size=10, shuffle=True)
 
     print("Starting training")
-    for epoch in range(30):
+    
+    consecutiveEpochs = 1  # Contador para el número de épocas consecutivas con pérdida media <= 0.5
+    averageLoss = 0.5
+    limitEpochs = 1000
+
+    for epoch in range(limitEpochs):
+
+        epoch_loss = 0.0  # Pérdida total de la época
 
         for i, data in enumerate(train_loader, 0):
 
@@ -69,6 +76,8 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
             loss.backward()
             optimizer.step()
 
+            epoch_loss += loss.item()
+
             # Loss graphic
             writer.add_scalar("Loss/train", loss, epoch)
 
@@ -76,9 +85,23 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
             if i % 10 == 0:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' %
                       (epoch + 1, i + 1, loss))
-                # print("Output = ", outputs,  "labels = ", label, "==== Loss = ", loss, "\n\n")
                 save_checkpoint(checkpointPath, model, optimizer)
-            
+
+        # Loss each epoch
+        averageLoss = epoch_loss / len(train_loader)
+        print('Epoch {} - Average Loss: {:.3f}'.format(epoch + 1, averageLoss))
+
+        # End criteria succeded?
+        if averageLoss <= averageLoss:
+            consecutiveEpochs += 1
+        else:
+            consecutiveEpochs = 0
+
+        # Ends the training in n consecutive epochs with creteria succeded
+        if consecutiveEpochs == consecutiveEpochs:
+            print('Training terminated. Consecutive epochs with average loss <= 0.5.')
+            break
+
     print('Finished Training')
 
 
@@ -89,15 +112,18 @@ if __name__ == "__main__":
     checkpointPath = package_path + "/utils/network.tar"
 
     model = pilotNet()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.1)
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.05)
 
+    # Loads iif theres another model
     if should_resume():
         load_checkpoint(checkpointPath, model, optimizer)
 
+    # Set up cura
     device = torch.device("cuda:0")
     model.to(device)
     model.train(True)
 
+    # Trains
     train(
         checkpointPath,
         model,
