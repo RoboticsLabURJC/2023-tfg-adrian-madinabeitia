@@ -5,7 +5,7 @@ from torch import nn
 import torch
 from torch.serialization import save
 from torch.utils.data import DataLoader
-
+import argparse
 import torch.optim as optim
 import sys
 
@@ -53,8 +53,8 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
 
     print("Starting training")
     
-    consecutiveEpochs = 1  # Contador para el número de épocas consecutivas con pérdida media <= 0.5
-    averageLoss = 0.5
+    consecutiveEpochs = 0  # Contador para el número de épocas consecutivas con pérdida media <= 0.5
+    targetLoss = 0.5
     limitEpochs = 1000
 
     for epoch in range(limitEpochs):
@@ -83,8 +83,8 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
 
             # Saves the model
             if i % 10 == 0:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, loss))
+                # print('[%d, %5d] loss: %.3f' %
+                #       (epoch + 1, i + 1, loss))
                 save_checkpoint(checkpointPath, model, optimizer)
 
         # Loss each epoch
@@ -92,24 +92,23 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
         print('Epoch {} - Average Loss: {:.3f}'.format(epoch + 1, averageLoss))
 
         # End criteria succeded?
-        if averageLoss <= averageLoss:
+        if averageLoss <= targetLoss:
             consecutiveEpochs += 1
         else:
             consecutiveEpochs = 0
 
         # Ends the training in n consecutive epochs with creteria succeded
-        if consecutiveEpochs == consecutiveEpochs:
+        if consecutiveEpochs == 4:
             print('Training terminated. Consecutive epochs with average loss <= 0.5.')
             break
 
     print('Finished Training')
 
 
-if __name__ == "__main__":
-
+def main(fileName):
     # Gets the model path
-    package_path = ament_index_python.get_package_share_directory("drone_driver")
-    checkpointPath = package_path + "/utils/network.tar"
+    # package_path = ament_index_python.get_package_share_directory("drone_driver")
+    checkpointPath = "../utils/" + fileName
 
     model = pilotNet()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.05)
@@ -129,3 +128,12 @@ if __name__ == "__main__":
         model,
         optimizer,
     )
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')
+    parser.add_argument('--n', type=str, default="network",
+                        help='Path to the third ROS bag dataset')
+
+    args = parser.parse_args()
+    main(args.n)

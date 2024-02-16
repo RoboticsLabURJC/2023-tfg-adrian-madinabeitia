@@ -19,16 +19,12 @@ import os
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling
+from include.control_functions import PID, save_timestamps, save_profiling
 from include.models import pilotNet
 from train import load_checkpoint
 from include.data import dataset_transforms
 
-MIN_PIXEL = -360
-MAX_PIXEL = 360
-
 # Vel control
-MAX_LINEAR = 2.5
 MAX_Z = 2
 
 ## PID controlers
@@ -37,7 +33,7 @@ Z_KD = 0.45
 Z_KI = 0.0
 
 package_path = ament_index_python.get_package_share_directory("drone_driver")
-CHECKPOINT_PATH = package_path + "/utils/network.tar"
+CHECKPOINT_PATH = "../utils/network2.tar"
 
 class droneNeuralController(DroneInterface):
 
@@ -58,8 +54,7 @@ class droneNeuralController(DroneInterface):
         self.z_pid.set_pid(Z_KP, Z_KD, Z_KI)
         
         # Control
-        self.px_rang = MAX_PIXEL - MIN_PIXEL
-        self.linearVel = MAX_LINEAR
+        self.linearVel = 0
 
         timerPeriod = 0.01  # seconds
         saveDataPeriod = 5.0

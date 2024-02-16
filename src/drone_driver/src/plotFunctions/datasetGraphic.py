@@ -79,8 +79,8 @@ def get_labels(vels):
 
 def main():
     # Data for the columns 
-    x = np.array([-0.75, -0.5, -0.25, -0.05, 0.05, 0.25, 0.5, 0.75])
-    y = np.array([4, 4, 4, 4, 4, 4, 4, 4])
+    x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
+    y = np.array([4, 4, 4, 4, 4, 4])
     
     # Gets the dataset
     data = rosbagDataset(DATA_PATH, dataset_transforms)

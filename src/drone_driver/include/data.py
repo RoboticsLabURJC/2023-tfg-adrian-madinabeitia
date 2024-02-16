@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
+# Execute as => python3 train.py --n network2.tar
 
 from rosbags.rosbag2 import Reader as ROS2Reader
-from rosbags.serde import deserialize_cdr
 import torch
 import torchvision.transforms as transforms
 
-import matplotlib.pyplot as plt
 import numpy as np
 import random
 from torch.utils.data import Dataset
 import os
 from PIL import Image
 
-ANGULAR_UMBRALS = [-1.5, -0.6, -0.3, 0, 0.3, 0.6, 1.5, float('inf')]  # label < umbral
+ANGULAR_UMBRALS = [-0.3, -0.1, 0, 0.1, 0.3, float('inf')]  # label < umbral
 LINEAR_UMBRALS = [5, 5.5, float('inf')]
 
 DATA_PATH = "../training_dataset"
@@ -124,24 +123,15 @@ class rosbagDataset(Dataset):
 
     
     def balancedDataset(self):
+        useWeights = False
         #   <       5     5.5   inf
-        weights = [(0.40, 0.0, 0.0),     # < -1.5
-                   (0.50, 0.3, 0.0),     # < -0.6
-                   (0.60, 0.5, 0.7),     # < -0.3
-                   (0.70, 0.8, 0.99),    # < 0
-                   (0.70, 0.8, 0.99),    # < 0.3
-                   (0.60, 0.5, 0.7),     # < 0.6
-                   (0.50, 0.3, 0.0),     # < 1.5
-                   (0.40, 0.0, 0.0)]     # < inf
+        weights = [(0.80, 0.0, 0.0),     # < -0.6
+                   (0.90, 0.7, 0.4),     # < -0.3
+                   (0.50, 0.5, 0.99),    # < 0
+                   (0.50, 0.5, 0.99),    # < 0.3
+                   (0.80, 0.7, 0.4),     # < 0.6
+                   (0.90, 0.0, 0.0)]      # < inf
 
-        # weights = [(0.99, 0.99, 0.99),
-        #            (0.99, 0.99, 0.99),     # < -0.5
-        #            (0.99, 0.99, 0.99),     # < -0.25
-        #            (0.99, 0.99, 0.99),     # < 0
-        #            (0.99, 0.99, 0.99),     # < 0.25
-        #            (0.99, 0.99, 0.99),     # < 0.5
-        #            (0.99, 0.99, 0.99),
-        #            (0.99, 0.99, 0.99)]     # < inf
 
         # Gets all the subsets
         labeledDataset = [self.getAngularSubset(self.dataset, float('-inf'), ANGULAR_UMBRALS[0])]
@@ -180,11 +170,14 @@ class rosbagDataset(Dataset):
                     else:
                         # If the current length is greater than or equal to maxSamples, we subsample
                         balancedSubset = random.sample(currentSubset, maxSamples)
-                
-                    # Adjusts to weights
-                    balancedSubset = self.subSample(balancedSubset, 1 - weights[i][j])
+                    
+                    # Subsamples if it is
+                    if useWeights:
+                        # Adjusts to weights
+                        balancedSubset = self.subSample(balancedSubset, 1 - weights[i][j])
+
                     balancedAngLabeled.append(balancedSubset)
-            
+                    
             balancedDataset.append(balancedAngLabeled)
 
         # Joins all the labels
