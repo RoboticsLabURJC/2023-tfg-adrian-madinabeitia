@@ -3,7 +3,7 @@
 from rosbags.rosbag2 import Reader as ROS2Reader
 from rosbags.serde import deserialize_cdr
 from torch.utils.data import Dataset
-import os
+import math
 import matplotlib.pyplot as plt
 import argparse
 
@@ -37,21 +37,22 @@ class RosbagDataset(Dataset):
                     y_path.append(data.transforms[0].transform.translation.y)
                     timestamps.append(timestamp)
 
-        return x_path, y_path, timestamps
+        return list(zip(x_path, y_path, timestamps))
 
 
-def plot_route(x_paths, y_paths, label):
-    plt.plot(x_paths, y_paths, linestyle='-', marker='o', markersize=0.1, label=label)
+def plot_route(path, label):
+    xPath, yPath, _ = zip(*path)
+    plt.plot(xPath, yPath, linestyle='-', marker='o', markersize=0.1, label=label)
 
 
-def printLapTime(xPath, yPath, timestamps):
+def get_lap_time(path):
     # Gets the time between each lap
-    for i in range(int(len(xPath) / 4)):
-        for j in range(int(len(xPath) / 4)):
+    for i in range(int(len(path) / 4)):
+        for j in range(int(len(path) / 4)):
 
-            if abs(xPath[i] - xPath[-j]) < 0.1 and abs(yPath[i] - yPath[-j]) < 0.1 and abs(i - j) > 20:
+            if abs(path[i][0] - path[-j][0]) < 0.1 and abs(path[i][1] - path[-j][1]) < 0.1 and abs(i - j) > 20:
 
-                result = (timestamps[-j] - timestamps[i]) / 1e9
+                result = (path[-j][2] - path[i][2]) / 1e9
                 if  result > 0:
                     return result
 
@@ -60,43 +61,83 @@ def printLapTime(xPath, yPath, timestamps):
     
     return 0
 
+def get_lap_error(refPath, path):
+    slack = 5
+
+    # Finds the first point of path in the reference path
+    minDist = float('inf')
+    index = 0
+
+    for i in range(len(refPath)):
+        # Euclidean distance
+        dist = math.sqrt((refPath[i][0] - path[0][0])**2 + (refPath[i][1] - path[0][1])**2)
+
+        if dist < minDist:
+            minDist = dist
+            index = i
+    
+    totalErr = 0
+
+    # Estimates the total error:
+    for i in range(len(path)):
+        # Corrects the trajectory
+        for j in range(slack):
+            ind = (index + j) % len(refPath)
+
+            # Euclidean distance
+            dist = math.sqrt((refPath[ind][0] - path[i][0])**2 + (refPath[ind][1] - path[i][1])**2)
+
+            if dist < minDist:
+                minDist = dist
+                index = ind
+        
+        totalErr += minDist
+    
+    meanError = totalErr / len(path)
+
+    return meanError
+        
+
+
 def main(path3):
 
     # Gets the rosbags
-    dataset_1 = RosbagDataset(ROSBAGS_PATH_1)
-    dataset_2 = RosbagDataset(ROSBAGS_PATH_2)
-    dataset_3 = RosbagDataset(path3)
+    dataset1 = RosbagDataset(ROSBAGS_PATH_1)
+    dataset2 = RosbagDataset(ROSBAGS_PATH_2)
+    dataset3 = RosbagDataset(path3)
 
-    tf_topic = "/tf"
+    tfTopic = "/tf"
 
     # Gets the paths
-    x_path_1, y_path_1, timeStamps1 = dataset_1.get_path(tf_topic)
-    x_path_2, y_path_2, timeStamps2 = dataset_2.get_path(tf_topic)
-    x_path_3, y_path_3, timeStamps3 = dataset_3.get_path(tf_topic)
+    path1 = dataset1.get_path(tfTopic)
+    path2 = dataset2.get_path(tfTopic)
+    path3 = dataset3.get_path(tfTopic)
 
     # Prints the lapTimes
-    lap1 = printLapTime(x_path_1, y_path_1, timeStamps1)
-    lap2 = printLapTime(x_path_2, y_path_2, timeStamps2)
-    lap3 = printLapTime(x_path_3, y_path_3, timeStamps3)
+    lap1 = get_lap_time(path1)
+    lap2 = get_lap_time(path2)
+    lap3 = get_lap_time(path3)
+
+    # Calculates the error between trajectories
+    error1 = get_lap_error(path1, path2) * 10
+    error2 = get_lap_error(path1,  path3) * 10
 
     # Create a single figure for all plots
     label1 = 'Slow expert pilot in ' + str(round(lap1, 2)) + ' sec'
-    label2 = 'Fast expert pilot in ' + str(round(lap2, 2)) + ' sec'
-    label3 = 'Fast expert pilot in ' + str(round(lap3, 2)) + ' sec'
+    label2 = 'Fast expert pilot in ' + str(round(lap2, 2)) + ' sec | Error = ' + str(round(error1, 2))
+    label3 = 'Neural pilot in ' + str(round(lap3, 2)) + ' sec | Error = ' + str(round(error2, 2))
 
     plt.figure()
 
-    plot_route(x_path_1, y_path_1, label=label1)
-    plot_route(x_path_2, y_path_2, label=label2)
-    plot_route(x_path_3, y_path_3, label=label3)
+    plot_route(path1, label=label1)
+    plot_route(path2, label=label2)
+    plot_route(path3, label=label3)
 
     plt.title('Results')
     plt.xlabel('x')
     plt.ylabel('y')
     plt.legend()
     plt.show()
-
-
 
 
 if __name__ == "__main__":

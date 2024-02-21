@@ -13,10 +13,7 @@ from include.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LIN
 
 DATA_PATH = "../../training_dataset"
 
-def plot_3d_bars(x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
-    # Create the figure and 3D axes
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+def plot_3d_bars(ax, x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
 
     # Adjust the heights of the bars to go from 0 to their respective z values
     width = depth = 0.15
@@ -31,8 +28,29 @@ def plot_3d_bars(x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
     ax.set_zlabel(zlabel)
     ax.set_title(title)
 
-    plt.show()
 
+def plot_2d(ax, vels):
+
+    linVel, angVel = zip(*vels)
+    dividedVels = []
+
+    # Divides angular vels
+    for i in range(len(angVel)):
+        dividedVels.append(angVel[i] / 10)
+
+    # Sets the labels
+    ax.set_xlabel("Linear vel")
+    ax.set_ylabel("Angular vel")
+
+    ax.plot(linVel, dividedVels, linestyle='', marker='o', markersize=1)
+
+    # Draws vertical lines to show linear umbrals
+    for umbral in LINEAR_UMBRALS[:-1]:
+        ax.vlines(umbral, ymin=min(dividedVels), ymax=max(dividedVels), colors='black', linestyles='dashed', linewidth=1)
+
+    # Draws horizontal lines to show linear umbrals
+    for umbral in ANGULAR_UMBRALS[:-1]:
+        ax.hlines(y=umbral, xmin=min(linVel), xmax=max(linVel), colors='black', linestyles='dashed', linewidth=1)
 
 def getLabelDistribution(labels):
     totalAngVels = np.zeros((len(LINEAR_UMBRALS), len(ANGULAR_UMBRALS)), dtype=int)
@@ -77,40 +95,46 @@ def get_labels(vels):
     return labels
 
 
+def graphData(titles, vels):
+    # fig configuration
+    fig = plt.figure(figsize=(12, 12))
+
+
+    gs = fig.add_gridspec(len(vels), 2, width_ratios=[1, 1], height_ratios=[1, 1], wspace=0.2, hspace=0.1)
+
+    for i, vel in enumerate(vels):
+        ax2D = fig.add_subplot(gs[1, i])
+        ax3D = fig.add_subplot(gs[0, i], projection='3d')
+
+        # Data for the columns 
+        x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
+        y = np.array([4, 4, 4, 4, 4, 4])
+
+        # Gets the heights for 3D graphic
+        labels = get_labels(vel)
+        z = getLabelDistribution(labels)
+
+        # 3D plot
+        title_3d = titles[i] + " with " + str(len(vel)) + " samples"
+
+        plot_2d(ax2D, vel)
+        plot_3d_bars(ax3D, x, y, z.T, xlabel='Angular vel', ylabel='Linear vel', zlabel='Samples', title=title_3d)
+
+    plt.show()
+
 def main():
-    # Data for the columns 
-    x = np.array([-0.5, -0.25, -0.05, 0.05, 0.25, 0.5])
-    y = np.array([4, 4, 4, 4, 4, 4])
     
-    # Gets the dataset
-    data = rosbagDataset(DATA_PATH, dataset_transforms)
-    vels = [velocitys for image, velocitys in data.dataset]
-    labels = get_labels(vels)
 
-    # Bars height = Number of samples
-    z = getLabelDistribution(labels)
+    # Graphs the raw dataset
+    data = rosbagDataset(DATA_PATH, dataset_transforms, True, 2)
+    rawVels = [velocitys for image, velocitys in data.dataset]
 
-    # Graphics
-    xLabel = 'Angular vel'
-    yLabel = 'Linear vel'
-    zLabel = 'Samples'
-    title = "Num samples = " + str(len(vels))
-
-    plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title=title)
-
-    # ## Plots the balanced data
-    # # Plots the balanced data
+    # Graphs the balanced dataset
     balancedDataset = data.balancedDataset()
+    balancedVels = [velocitys for image, velocitys in balancedDataset]
 
-    vels = [velocitys for image, velocitys in balancedDataset]
-    labels = get_labels(vels)
+    graphData(["Raw datset", "Balanced dataset"], [rawVels, balancedVels])
 
-    
-    # Bars height = Number of samples
-    z = getLabelDistribution(labels)
-    title = "Num samples = " + str(len(vels))
-
-    plot_3d_bars(x, y, z.T, xlabel=xLabel, ylabel=yLabel, zlabel=zLabel, title=title)
 
 if __name__ == "__main__":
     main()

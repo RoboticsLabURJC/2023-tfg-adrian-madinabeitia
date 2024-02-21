@@ -4,11 +4,16 @@
 
 from rosbags.rosbag2 import Reader as ROS2Reader
 import torch
+import matplotlib.pyplot as plt
+import random
 import torchvision.transforms as transforms
-
+import albumentations as A
+from albumentations.pytorch import ToTensorV2
+from torchvision import transforms
 import numpy as np
 import random
 from torch.utils.data import Dataset
+import torchvision.transforms.functional as F
 import os
 from PIL import Image
 
@@ -77,7 +82,7 @@ def get_vels(folder_path):
     return vels
 
 class rosbagDataset(Dataset):
-    def __init__(self, main_dir, transform) -> None:
+    def __init__(self, main_dir, transform, boolAug=False, dataAument=1) -> None:
         self.main_dir = main_dir
         self.transform = transform
         self.minSamples = 25
@@ -86,18 +91,67 @@ class rosbagDataset(Dataset):
         self.velData = get_vels(main_dir + "/labels")
 
         self.dataset = [(self.imgData[i], self.velData[i]) for i in range(len(self.velData))]
-       
+        self.applyAug = boolAug
+        self.dataAument = dataAument
 
     def __len__(self):
-        return len(self.velData)
+        return len(self.dataset)
 
     def __getitem__(self, item):
         device = torch.device("cuda:0")
-        image_tensor = self.transform(self.dataset[item][0]).to(device)
-        vel_tensor = torch.tensor(self.dataset[item][1]).to(device)
+        
+        # Applys augmentation
+        if self.applyAug:
+            image_tensor = torch.tensor(self.dataset[item][0]).to(device)
+            image_tensor, vel_tensor = self.applayAugmentation(device, image_tensor, self.dataset[item][1])
+
+        # Not applys augmentation
+        else:
+            image_tensor = self.transform(self.dataset[item][0]).to(device)
+            vel_tensor = torch.tensor(self.dataset[item][1]).to(device)
 
         return (vel_tensor, image_tensor)
     
+    
+    def applayAugmentation(self, device, imageTensor, velocityValue):
+        mov = 10
+
+        # Aplys color augmentation 
+        augmented_image_tensor = self.colorAugmeentation()(image=imageTensor.cpu().numpy())['image']
+        imgTensor = torch.tensor(augmented_image_tensor).to(device)
+
+        randNum = random.randint(0, 7)
+
+        # Flips the image so the angular will be in opposite way    
+        if randNum == 3 or randNum == 4:    # 2 / 8 chance
+            imgTensor = torch.flip(imgTensor, dims=[-1])
+            velTensor = torch.tensor((velocityValue[0], -velocityValue[1])).to(device)
+
+        # Horizontal movement
+        elif randNum == 2:                  # 1 / 8 chance
+            randMove = random.randint(-mov, mov)
+            imgTensor = F.affine(imgTensor, angle=0, translate=(randNum, 0), scale=1, shear=0)
+            velTensor = torch.tensor((velocityValue[0], velocityValue[1] + randMove/(mov*2))).to(device)
+
+        # Vertical movement
+        elif randNum == 1:                  # 1 / 8 chance
+            randMove = random.randint(-mov, mov)
+            imgTensor = F.affine(imgTensor, angle=0, translate=(0, randMove), scale=1, shear=0)
+            velTensor = torch.tensor((velocityValue[0] - randMove/(mov*1.5), velocityValue[1])).to(device)
+        
+        else:   # No changes                # 4 / 8 chance
+            velTensor = torch.tensor(velocityValue).to(device)
+
+        return imgTensor, velTensor
+
+    def colorAugmeentation(self, p=0.5):
+        return A.Compose([
+            A.HorizontalFlip(p=p),
+            A.RandomBrightnessContrast(),
+            A.Normalize(),
+            ToTensorV2(),
+        ])
+        
 
     def subSample(self, label, percent):
         toDel = int(len(label) * percent)
@@ -147,6 +201,9 @@ class rosbagDataset(Dataset):
                 if len(linLabeled) > maxSamples:
                     maxSamples = len(linLabeled)
 
+        # Auments the data
+        maxSamples = int(maxSamples * self.dataAument)        
+        
         # Balances all the clases
         balancedDataset = []
 
@@ -196,3 +253,23 @@ dataset_transforms = transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize([66, 200]),
 ])
+
+
+if __name__ == "__main__":
+
+    # Crear una instancia de tu conjunto de datos
+    dataset = rosbagDataset(main_dir=DATA_PATH, transform=dataset_transforms, boolAug=True, dataAument=2)
+
+    # Mostrar algunas imágenes y sus velocidades asociadas
+    for i in range(15):  # Mostrar las primeras 5 imágenes
+        idx = random.randint(0, len(dataset) - 1)
+        velocity, image = dataset[idx]
+
+        # Deshacer el cambio de forma y la normalización para mostrar la imagen correctamente
+        image = image.permute(1, 2, 0).cpu().numpy()
+        image = (image * 0.5) + 0.5  # Desnormalizar
+
+        # Mostrar la imagen y su velocidad asociada
+        plt.imshow(image)
+        plt.title(f"Velocidad: {velocity}")
+        plt.show()
