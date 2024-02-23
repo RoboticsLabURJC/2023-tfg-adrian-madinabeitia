@@ -100,7 +100,7 @@ def graphData(titles, vels):
     fig = plt.figure(figsize=(12, 12))
 
 
-    gs = fig.add_gridspec(len(vels), 2, width_ratios=[1, 1], height_ratios=[1, 1], wspace=0.2, hspace=0.1)
+    gs = fig.add_gridspec(2, len(vels), width_ratios=[1] * len(vels), height_ratios=[1] * 2, wspace=0.2, hspace=0.1)
 
     for i, vel in enumerate(vels):
         ax2D = fig.add_subplot(gs[1, i])
@@ -125,15 +125,23 @@ def graphData(titles, vels):
 def main():
     
 
-    # Graphs the raw dataset
-    data = rosbagDataset(DATA_PATH, dataset_transforms, True, 2)
-    rawVels = [velocitys for image, velocitys in data.dataset]
+    # Gets the raw dataset
+    data1= rosbagDataset(DATA_PATH, dataset_transforms, False, 1)
+    rawVels = [velocitys for image, velocitys in data1.dataset]
 
-    # Graphs the balanced dataset
-    balancedDataset = data.balancedDataset()
+    # Gets the balanced dataset
+    balancedDataset = data1.balancedDataset()
     balancedVels = [velocitys for image, velocitys in balancedDataset]
 
-    graphData(["Raw datset", "Balanced dataset"], [rawVels, balancedVels])
+    # Gets the augmented dataset
+    data2 = rosbagDataset(DATA_PATH, dataset_transforms, True, 2)
+    augmentedVels = []
+    for i in range(len(data2)):
+        velocity, image = data2[i]
+        augmentedVels.append(velocity.cpu().detach().numpy())
+    
+
+    graphData(["Raw datset", "Augmented dataset"], [rawVels, augmentedVels])
 
 
 if __name__ == "__main__":

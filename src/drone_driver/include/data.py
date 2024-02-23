@@ -86,16 +86,31 @@ class rosbagDataset(Dataset):
         self.main_dir = main_dir
         self.transform = transform
         self.minSamples = 25
+        self.dataAument = dataAument
         
         self.imgData = get_image_dataset(main_dir + "/frontal_images")
         self.velData = get_vels(main_dir + "/labels")
 
-        self.dataset = [(self.imgData[i], self.velData[i]) for i in range(len(self.velData))]
+        self.dataset =  self.get_dataset() 
         self.applyAug = boolAug
-        self.dataAument = dataAument
+        
 
     def __len__(self):
         return len(self.dataset)
+
+    def get_dataset(self):
+        dataset = list(((self.imgData[i], self.velData[i]) for i in range(len(self.velData))))
+
+        original_size = len(dataset)
+        new_size = int(original_size * self.dataAument)
+
+        for _ in range(new_size - original_size):
+            randIndex = random.randint(0, original_size - 1)
+            dataset.append((self.imgData[randIndex], self.velData[randIndex]))
+        
+        return dataset
+
+
 
     def __getitem__(self, item):
         device = torch.device("cuda:0")
