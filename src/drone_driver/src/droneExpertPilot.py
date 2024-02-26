@@ -71,8 +71,7 @@ class droneController(DroneInterface):
         self.linearVel = MAX_LINEAR
 
         # Create timers
-        self.timer = self.create_timer(0.1, self.timer_callback)
-
+        # self.timer = self.create_timer(0.1, self.timer_callback)
         self.saver = self.create_timer(5.0, self.save_data)
 
 
@@ -87,6 +86,7 @@ class droneController(DroneInterface):
 
 
     def save_data(self):
+        self.get_logger().info("Saving data...")
         save_timestamps('./sub_timestamps.npy', self.image_timestamps)
         save_timestamps('./vel_timestamps.npy', self.vel_timestamps)
         save_profiling('./profiling_data.txt', self.profiling)
@@ -137,8 +137,6 @@ class droneController(DroneInterface):
         while not self.info['state'] == PlatformStatus.FLYING:
             time.sleep(0.5)
 
-
-        self.get_logger().info("Estado del temporizador: %s" % ("Listo" if self.timer.is_ready() else "No listo"))
         self.get_logger().info("Following line")
 
     
@@ -201,7 +199,7 @@ class droneController(DroneInterface):
 
         return linearVel 
 
-    def timer_callback(self):
+    def follow_line(self):
         if self.info['state'] == PlatformStatus.FLYING and self.cv_image is not None:
             initTime = time.time()
 
@@ -224,7 +222,7 @@ class droneController(DroneInterface):
 
             # Set the velocity
             # self.set_vel(self.linearVel, 0, 0, anguarVel)
-            self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
+            # self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
             self.set_vel2D(linearVel, 0, MAX_Z, angularVel)
 
             self.vel_timestamps.append(time.time())
@@ -241,7 +239,11 @@ def main(args=None):
     drone.take_off_process()
 
     # Start the flight
-    rclpy.spin(drone)
+    while rclpy.ok():
+        drone.follow_line()
+
+        # Process a single iteration of the ROS event loop
+        rclpy.spin_once(drone, timeout_sec=0.1)
 
     # End of execution
     drone.destroy_node()
@@ -257,6 +259,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-

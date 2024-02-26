@@ -62,21 +62,21 @@ class imageFilterNode(Node):
         red_farest = band_midpoint(mono_img, top_point, top_point + UPPER_LIMIT_UMBRAL)
         red_nearest = band_midpoint(mono_img, bottom_point - BOTTOM_LIMIT_UMBRAL, bottom_point)
 
-        # Convertir la imagen monocromática a 3 canales
+        # Image to 3 channels
         mono_img_color = cv2.merge([mono_img, mono_img, mono_img])
 
         # Dibujar los puntos en verde en la imagen original
-        cv2.circle(mono_img_color, (red_farest[0], top_point), 5, (0, 255, 0), -1)  # Punto farest en verde
-        cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1)  # Punto nearest en verde
-        cv2.circle(mono_img_color, (distancePoint, top_point), 5, (255, 0, 0), -1)  # Punto farest en verde
-        # Mostrar la imagen original con los puntos verdes
+        cv2.circle(mono_img_color, (red_farest[0], top_point), 5, (0, 255, 0), -1) 
+        cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1) 
+        cv2.circle(mono_img_color, (distancePoint, top_point), 5, (255, 0, 0), -1) 
+        # Show the image
         cv2.imshow(label, mono_img_color)
         cv2.waitKey(1)
 
     def color_filter(self, image):
 
         # Apply a red filter to the image
-        red_lower = np.array([0, 0, 100])
+        red_lower = np.array([0, 0, 70])
         red_upper = np.array([50, 50, 255])
         red_mask = cv2.inRange(image, red_lower, red_upper)
 

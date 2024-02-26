@@ -14,7 +14,7 @@ sim_time = "true"
 # world = "/montmelo_line.world"
 
 # Test world
-world = "/nurburgring_line.world"
+#world = "/nurburgring_line.world"
 
 
 env_vars = {
@@ -26,8 +26,16 @@ def exit_process_function(_launch_context, route, ns):
 
 def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
-    worlds_dir = os.path.join(get_package_share_directory('drone_driver'), 'worlds')
     utils_path = os.path.join(get_package_share_directory('drone_driver'), 'utils')
+
+    world = DeclareLaunchArgument(
+        'world',
+        default_value="../worlds/nurburgring_line.world"
+    )
+    yaw = DeclareLaunchArgument(
+        'yaw',
+        default_value="0.0"
+    )
 
     # Px4 autopilot gazebo launch
     gazeboPx4 = ExecuteProcess(
@@ -72,13 +80,14 @@ def generate_launch_description():
         output='screen',
         arguments=[
             sim_config + '/world.json',
-            worlds_dir + world,
-            # '0.0', '0.0', '0.0', '0.0'
-            '0.0', '0.0', '0.0', '3.14' # 3.54
+            LaunchConfiguration('world'),
+            '0.0', '0.0', '0.0', LaunchConfiguration('yaw') #3.14 # 3.54
         ],
     )  
 
     return LaunchDescription([
+        world,
+        yaw,
         parseYaml,
         gazeboPx4,
         tmuxLauncher,
