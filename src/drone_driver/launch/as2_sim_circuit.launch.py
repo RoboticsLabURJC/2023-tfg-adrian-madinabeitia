@@ -9,14 +9,6 @@ from launch_ros.actions import Node
 namespace= "drone0"
 sim_time = "true"
 
-# world = "/montreal_line.world"
-# world = "/simple_circuit.world"
-# world = "/montmelo_line.world"
-
-# Test world
-#world = "/nurburgring_line.world"
-
-
 env_vars = {
     'AEROSTACK2_SIMULATION_DRONE_ID': namespace
 }
@@ -65,11 +57,14 @@ def generate_launch_description():
 
         name="tmuxLauncher",
         output='screen'
-
     )
 
     tmuxAttach = ExecuteProcess(
-        cmd=['gnome-terminal', '--', 'tmux', 'attach-session', '-t', namespace],
+        # Aerostack2 depuration
+        # cmd=['gnome-terminal', '--', 'tmux', 'attach-session', '-t', namespace],
+
+        # No aditional window
+        cmd=['tmux', 'attach-session', '-t', namespace],
         name="attach",
     )
 

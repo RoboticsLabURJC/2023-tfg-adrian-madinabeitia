@@ -1,5 +1,5 @@
 {
-    "world": "../worlds/montmelo_line.world",
+    "world": "../worlds/nurburgring_line.world",
     "drones": [
         {
             "model": "iris_dual_cam",
@@ -8,7 +8,7 @@
                 0.0,
                 0.0,
                 0.0,
-                3.14
+                0.0
             ]
         }
     ]

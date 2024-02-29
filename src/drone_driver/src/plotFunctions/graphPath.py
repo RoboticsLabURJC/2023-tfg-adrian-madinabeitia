@@ -7,9 +7,6 @@ import math
 import matplotlib.pyplot as plt
 import argparse
 
-ROSBAGS_PATH_1 = "./positionRecords/perfectNurburGingTF"
-ROSBAGS_PATH_2 = "./positionRecords/EPNumbirngTF"
-ROSBAGS_PATH_3 = "./positionRecords/"
 
 class RosbagDataset(Dataset):
     def __init__(self, rosbag_path) -> None:
@@ -62,7 +59,7 @@ def get_lap_time(path):
     return 0
 
 def get_lap_error(refPath, path):
-    slack = 5
+    slack = 3
 
     # Finds the first point of path in the reference path
     minDist = float('inf')
@@ -99,12 +96,12 @@ def get_lap_error(refPath, path):
         
 
 
-def main(path3):
+def main(perfectPath, expertPath, neuralPath):
 
     # Gets the rosbags
-    dataset1 = RosbagDataset(ROSBAGS_PATH_1)
-    dataset2 = RosbagDataset(ROSBAGS_PATH_2)
-    dataset3 = RosbagDataset(path3)
+    dataset1 = RosbagDataset(perfectPath)
+    dataset2 = RosbagDataset(expertPath)
+    dataset3 = RosbagDataset(neuralPath)
 
     tfTopic = "/tf"
 
@@ -124,8 +121,8 @@ def main(path3):
 
     # Create a single figure for all plots
     label1 = 'Slow expert pilot in ' + str(round(lap1, 2)) + ' sec'
-    label2 = 'Fast expert pilot in ' + str(round(lap2, 2)) + ' sec | Error = ' + str(round(error1, 2))
-    label3 = 'Neural pilot in ' + str(round(lap3, 2)) + ' sec | Error = ' + str(round(error2, 2))
+    label2 = 'Fast expert pilot in ' + str(round(lap2, 2)) + ' sec | Error = ' + str(round(error1, 2)) + 'm'
+    label3 = 'Neural pilot in ' + str(round(lap3, 2)) + ' sec | Error = ' + str(round(error2, 2)) + 'm'
 
     plt.figure()
 
@@ -142,8 +139,9 @@ def main(path3):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')
-    parser.add_argument('--p', type=str, default="Balanced2",
-                        help='Path to the third ROS bag dataset')
+    parser.add_argument('--perfect_path', type=str, required=True)
+    parser.add_argument('--expert_path', type=str, required=True)
+    parser.add_argument('--neural_path', type=str, required=True)
 
     args = parser.parse_args()
-    main(ROSBAGS_PATH_3 + args.p)
+    main(args.perfect_path, args.expert_path, args.neural_path)

@@ -5,11 +5,9 @@ from rosbags.serde import deserialize_cdr
 import numpy as np
 from torch.utils.data import Dataset
 import os
-import math
 import cv2
+import argparse
 
-
-ROSBAGS_PATH = "../training_dataset"
 
 class rosbagDataset(Dataset):
     def __init__(self, rosbag_path) -> None:
@@ -106,13 +104,18 @@ class rosbagDataset(Dataset):
 
 
 def main():
-    dataset = rosbagDataset(ROSBAGS_PATH)
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Process ROS bag data')
+    parser.add_argument('--rosbags_path', type=str, help='Path to ROS bags', required=True)
+    args = parser.parse_args()
+
+    # Instantiate rosbagDataset with the provided path
+    dataset = rosbagDataset(args.rosbags_path)
 
     img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
     vel_topic = "/drone0/self_localization/twist"
 
     dataset.transform_data(img_topic, vel_topic)
-
 
 if __name__ == "__main__":
     main()

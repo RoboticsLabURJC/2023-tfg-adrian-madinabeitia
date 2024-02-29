@@ -10,6 +10,9 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import sys
 import numpy as np
+import os
+
+import argparse
 
 import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
@@ -49,7 +52,7 @@ LIN_KI = 0.0
 
 class droneController(DroneInterface):
 
-    def __init__(self, drone_id: str = "drone0", verbose: bool = False, use_sim_time: bool = True) -> None:
+    def __init__(self, drone_id: str = "drone0", verbose: bool = False, use_sim_time: bool = True, profiling_directory: str = ".") -> None:
         super().__init__(drone_id, verbose, use_sim_time)
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
 
@@ -72,7 +75,7 @@ class droneController(DroneInterface):
 
         # Create timers
         # self.timer = self.create_timer(0.1, self.timer_callback)
-        self.saver = self.create_timer(5.0, self.save_data)
+        #self.saver = self.create_timer(5.0, self.save_data)
 
 
         #self.timer.
@@ -83,13 +86,17 @@ class droneController(DroneInterface):
         self.profiling = []
 
         self.cv_image = None
+        
+        # Create the profiling directory if it doesn't exist
+        self.profilingDir = profiling_directory
+        if not os.path.exists(self.profilingDir):
+            os.makedirs(self.profilingDir)
 
 
     def save_data(self):
-        self.get_logger().info("Saving data...")
-        save_timestamps('./sub_timestamps.npy', self.image_timestamps)
-        save_timestamps('./vel_timestamps.npy', self.vel_timestamps)
-        save_profiling('./profiling_data.txt', self.profiling)
+        save_timestamps(self.profilingDir + '/sub_timestamps.npy', self.image_timestamps)
+        save_timestamps(self.profilingDir + '/vel_timestamps.npy', self.vel_timestamps)
+        save_profiling(self.profilingDir + '/profiling_data.txt', self.profiling)
 
     def listener_callback(self, msg):
         self.image_timestamps.append(time.time())
@@ -232,18 +239,29 @@ class droneController(DroneInterface):
 def main(args=None):
     rclpy.init(args=args)
 
+    # Gets the necessary arguments
+    parser = argparse.ArgumentParser(description='Drone Controller with Profiling', allow_abbrev=False)
+    parser.add_argument('--output_directory', type=str, help='Directory to save profiling files', required=True)
+    parsed_args, _ = parser.parse_known_args()
+
     # Controller node
-    drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True)
+    drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True, profiling_directory=parsed_args.output_directory)
     
     # Takes off
     drone.take_off_process()
-
+    
+    initTime = time.time()
     # Start the flight
     while rclpy.ok():
         drone.follow_line()
 
+        if time.time() - initTime >= 5: 
+            drone.save_data()
+            initTime = time.time()
+
+
         # Process a single iteration of the ROS event loop
-        rclpy.spin_once(drone, timeout_sec=0.1)
+        rclpy.spin_once(drone, timeout_sec=0.05)
 
     # End of execution
     drone.destroy_node()

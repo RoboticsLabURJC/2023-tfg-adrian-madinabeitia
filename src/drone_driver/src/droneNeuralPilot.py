@@ -13,6 +13,7 @@ import cv2
 import numpy as np
 import ament_index_python
 import torch
+import argparse
 import os
 
 # Package includes
@@ -33,11 +34,11 @@ Z_KD = 0.45
 Z_KI = 0.0
 
 package_path = ament_index_python.get_package_share_directory("drone_driver")
-CHECKPOINT_PATH = "../utils/network2.tar"
+
 
 class droneNeuralController(DroneInterface):
 
-    def __init__(self, drone_id: str = "drone0", verbose: bool = False, use_sim_time: bool = True) -> None:
+    def __init__(self, drone_id: str = "drone0", verbose: bool = False, use_sim_time: bool = True, output_directory: str=".", network_directory: str=".") -> None:
         super().__init__(drone_id, verbose, use_sim_time)
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
 
@@ -45,7 +46,7 @@ class droneNeuralController(DroneInterface):
 
         # Gets the trained model
         self.model = pilotNet()
-        load_checkpoint(CHECKPOINT_PATH, self.model)
+        load_checkpoint(network_directory, self.model)
         self.device = torch.device("cuda:0")
         self.model.to(self.device)
 
@@ -58,8 +59,6 @@ class droneNeuralController(DroneInterface):
 
         timerPeriod = 0.01  # seconds
         saveDataPeriod = 5.0
-        self.timer = self.create_timer(timerPeriod, self.timer_callback)
-        self.timer = self.create_timer(saveDataPeriod, self.save_data)
 
         # Frequency analysis 
         self.image_timestamps = []
@@ -69,28 +68,22 @@ class droneNeuralController(DroneInterface):
         self.cv_image = None
         self.imageTensor = None
 
-        # Gets the package path
-        package_path = "."
-        base_folder = os.path.join(package_path, 'profiling')
-
-        # Fints the correct number
-        folder_number = 1
-        while os.path.exists(os.path.join(base_folder, f'profiling_neural_{folder_number}')):
-            folder_number += 1
 
         # Folder name
-        folder_name = f'profiling_neural_{folder_number}'
-        self.folder_path = os.path.join(base_folder, folder_name)
+        self.profilingDir = output_directory
+        if not os.path.exists(self.profilingDir):
+            os.makedirs(self.profilingDir)
+
 
     def save_data(self):
 
         # Creats the directory 
-        os.makedirs(self.folder_path, exist_ok=True)
+        os.makedirs(self.profilingDir, exist_ok=True)
 
         # Saves all the data
-        save_timestamps(os.path.join(self.folder_path, 'sub_timestamps.npy'), self.image_timestamps)
-        save_timestamps(os.path.join(self.folder_path, 'vel_timestamps.npy'), self.vel_timestamps)
-        save_profiling(os.path.join(self.folder_path, 'profiling_data.txt'), self.profiling)
+        save_timestamps(self.profilingDir + '/sub_timestamps.npy', self.image_timestamps)
+        save_timestamps(self.profilingDir + '/vel_timestamps.npy', self.vel_timestamps)
+        save_profiling(self.profilingDir + '/profiling_data.txt', self.profiling)
 
     def listener_callback(self, msg):
         self.image_timestamps.append(time.time())
@@ -194,7 +187,7 @@ class droneNeuralController(DroneInterface):
         return vels
 
 
-    def timer_callback(self):
+    def follow_line(self):
         if self.info['state'] == PlatformStatus.FLYING:
             initTime = time.time()
 
@@ -212,16 +205,31 @@ class droneNeuralController(DroneInterface):
 
 def main(args=None):
     rclpy.init(args=args)
+    
+    # Gets the necessary arguments
+    parser = argparse.ArgumentParser(description='Drone Controller with Profiling', allow_abbrev=False)
+    parser.add_argument('--output_directory', type=str, required=True)
+    parser.add_argument('--network_directory', type=str, required=True)
+    parsed_args, _ = parser.parse_known_args()
 
     # Controller node
-    drone = droneNeuralController(drone_id="drone0", verbose=False, use_sim_time=True)
+    drone = droneNeuralController(drone_id="drone0", verbose=False, use_sim_time=True, output_directory=parsed_args.output_directory, network_directory=parsed_args.network_directory)
 
-    # Takes offf
-    drone.take_off_process(MAX_Z)
-    time.sleep(1)
+    # Takes off
+    drone.take_off_process(2.0)
+    
+    initTime = time.time()
+    # Start the flight
+    while rclpy.ok():
+        drone.follow_line()
 
-    # Starts the flight
-    rclpy.spin(drone)
+        if time.time() - initTime >= 5: 
+            drone.save_data()
+            initTime = time.time()
+
+
+        # Process a single iteration of the ROS event loop
+        rclpy.spin_once(drone, timeout_sec=0.05)
 
     # End of execution
     drone.destroy_node()
@@ -232,14 +240,11 @@ def main(args=None):
 
     except Exception as e:
         print(f"An unexpected error occurred: {str(e)}")
-    
-    exit()
 
+    exit()
 
 if __name__ == '__main__':
     main()
-
-
 
 
 

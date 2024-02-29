@@ -15,7 +15,7 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
-from include.data import rosbagDataset, dataset_transforms, DATA_PATH
+from include.data import rosbagDataset, dataset_transforms
 from include.models import pilotNet
 
 writer = SummaryWriter()
@@ -41,26 +41,25 @@ def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None):
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
 
-def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
+def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimizer):
 
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
-    dataset = rosbagDataset(DATA_PATH, dataset_transforms)
+    dataset = rosbagDataset(datasetPath, dataset_transforms)
     dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=10, shuffle=True)
 
     print("Starting training")
     
-    consecutiveEpochs = 0  # Contador para el número de épocas consecutivas con pérdida media <= 0.5
+    consecutiveEpochs = 0  
     targetLoss = 0.5
     limitEpochs = 1000
 
     for epoch in range(limitEpochs):
 
-        epoch_loss = 0.0  # Pérdida total de la época
-
+        epoch_loss = 0.0  
         for i, data in enumerate(train_loader, 0):
 
             # get the inputs; data is a list of [inputs, labels]
@@ -105,35 +104,29 @@ def train(checkpointPath, model: pilotNet, optimizer: optim.Optimizer):
     print('Finished Training')
 
 
-def main(fileName):
-    # Gets the model path
-    # package_path = ament_index_python.get_package_share_directory("drone_driver")
-    checkpointPath = "../utils/" + fileName
+def main(filePath, datasetPath):
 
     model = pilotNet()
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.05)
 
-    # Loads iif theres another model
+    # Loads if theres another model
     if should_resume():
-        load_checkpoint(checkpointPath, model, optimizer)
+        load_checkpoint(filePath, model, optimizer)
 
     # Set up cura
     device = torch.device("cuda:0")
     model.to(device)
-    model.train(True)
 
-    # Trains
-    train(
-        checkpointPath,
-        model,
-        optimizer,
-    )
+    model.train(True)
+    train(filePath, datasetPath,
+        model, optimizer)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')
-    parser.add_argument('--n', type=str, default="network",
-                        help='Path to the third ROS bag dataset')
+
+    parser.add_argument('--network_path', type=str, default="../utils/net1")
+    parser.add_argument('--dataset_path', type=str, default="../training_dataset/network")
 
     args = parser.parse_args()
-    main(args.n)
+    main(args.network_path, args.dataset_path)

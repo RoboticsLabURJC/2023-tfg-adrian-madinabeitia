@@ -1,7 +1,7 @@
 #!/bin/python3
 
 import sys
-
+import argparse
 from time import sleep
 import rclpy
 from rclpy.node import Node
@@ -13,6 +13,7 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge
 import ament_index_python
+import os
 
 # Package includes
 package_path = ament_index_python.get_package_share_directory("drone_driver")
@@ -41,7 +42,7 @@ RADIUS = 2
 
 class imageFilterNode(Node):
 
-    def __init__(self):
+    def __init__(self, out_dir=".", trace=True):
         super().__init__('drone_line_follow')
         self.filteredPublisher_ = self.create_publisher(Image, '/filtered_img', 1)
         self.imageSubscription = self.create_subscription(Image, '/drone0/sensor_measurements/frontal_camera/image_raw', self.listener_callback, 1)
@@ -50,8 +51,15 @@ class imageFilterNode(Node):
         self.profiling = []
         self.timer = self.create_timer(5.0, self.save_data)
 
+        # Create the profiling directory if it doesn't exist
+        self.outDir = out_dir
+        if not os.path.exists(self.outDir):
+            os.makedirs(self.outDir)
+
+        self.traceBool = trace
+
     def save_data(self):
-        save_profiling('./profiling_image.txt', self.profiling)
+        save_profiling(self.outDir + '/profiling_image.txt', self.profiling)
 
 
     def show_trace(self, label, mono_img, original):
@@ -143,16 +151,25 @@ class imageFilterNode(Node):
         # Traces
 
         # Display the image with contours
-        self.show_trace("Countors: ", mono_img, img)
+        if self.traceBool:
+            self.show_trace("Countors: ", mono_img, img)
 
 
+def main(args=None):
+    rclpy.init(args=args)
+    # Gets the necessary arguments
+    parser = argparse.ArgumentParser(description='Drone Controller with Profiling', allow_abbrev=False)
+    parser.add_argument('--output_directory', type=str, help='Directory to save profiling files', required=True)
+    parser.add_argument('--trace', type=str, help='Show the traces')
+    parsed_args, _ = parser.parse_known_args()
 
-if __name__ == '__main__':
+    if parsed_args.trace == "True" or parsed_args.trace == "true":
+        traceBool = True
+    else:
+        traceBool = False
 
-    rclpy.init()
-
-    img = imageFilterNode()
-    
+    # Use the boolean directly, no need to convert to string
+    img = imageFilterNode(out_dir=parsed_args.output_directory, trace=traceBool)
     try:
         rclpy.spin(img) 
     except KeyboardInterrupt:
@@ -168,3 +185,7 @@ if __name__ == '__main__':
         print(f"An unexpected error occurred: {str(e)}")
 
     exit()
+
+
+if __name__ == '__main__':
+    main()
