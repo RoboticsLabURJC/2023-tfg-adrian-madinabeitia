@@ -12,8 +12,8 @@ Gazebo 11.10.2 -->
 
 <!-- Instalación de tmux -->
 
----
----
+<!-- ---
+--- -->
 ## Manually
 1. For launch only the world
 
@@ -63,6 +63,7 @@ cd PATH_TO_WORKSPACE/src/drone_driver/utils
 
 ```bash
 tmux
+```
 
 3. Run the script
 
