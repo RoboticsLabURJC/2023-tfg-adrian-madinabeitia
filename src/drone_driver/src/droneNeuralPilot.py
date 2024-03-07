@@ -57,9 +57,6 @@ class droneNeuralController(DroneInterface):
         # Control
         self.linearVel = 0
 
-        timerPeriod = 0.01  # seconds
-        saveDataPeriod = 5.0
-
         # Frequency analysis 
         self.image_timestamps = []
         self.vel_timestamps = []
@@ -91,13 +88,12 @@ class droneNeuralController(DroneInterface):
         # Converts the image to cv2 format
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-
-        # Resize the image
         resized_image = cv2.resize(cv_image, (64, 64))
+
+        self.image_array = np.array(resized_image)
        
         # Convert the resized image to a tensor for inference
         initTime = time.time()
-        self.image_array = np.array(resized_image)
         img_tensor = dataset_transforms(self.image_array).to(self.device)
         self.imageTensor = img_tensor.unsqueeze(0)
 
@@ -180,8 +176,7 @@ class droneNeuralController(DroneInterface):
 
         # Angular inference for neural network
         if self.imageTensor is not None:
-            vels = self.model(self.imageTensor)[0]
-            vels[1] = vels[1] / 10
+            vels = self.model(self.imageTensor)[0].tolist()
 
         self.profiling.append(f"\nAngular inference = {time.time() - initTime}")
         return vels
@@ -196,7 +191,7 @@ class droneNeuralController(DroneInterface):
             self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (vels[0], vels[1]))
 
             # Set the velocity
-            self.set_vel2D(vels[0], 0, MAX_Z, vels[1])
+            self.set_vel2D(float(vels[0]), 0, MAX_Z, float(vels[1]/3))
 
             # Profiling
             self.vel_timestamps.append(time.time())
@@ -245,6 +240,5 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
 
 

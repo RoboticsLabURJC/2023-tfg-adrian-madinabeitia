@@ -1,4 +1,4 @@
-#!/usr/bin/env python3waas
+#!/usr/bin/env python3
 from torch import nn
 
 

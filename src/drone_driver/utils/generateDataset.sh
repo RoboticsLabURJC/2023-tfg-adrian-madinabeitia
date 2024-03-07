@@ -9,7 +9,7 @@ if [ -z "$record_time" ] || [ -z "$output_directory" ]; then
     exit 1
 fi
 
-worlds=("montreal_line" "simple_circuit" "montmelo_line")
+worlds=( "simple_circuit" "montmelo_line" "nurburgring_line")
 orientations=(0.0 3.14)
 
 tmux new-window -n drone_recorder
@@ -26,18 +26,21 @@ for world in "${worlds[@]}"; do
         # Executes the simulator
         tmux send-keys -t 0 "ros2 launch drone_driver as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=$yaw" C-m
         sleep 5
-
-        tmux send-keys -t 1 "ros2 launch drone_driver expertPilot.launch.py trace:=False out_dir:=$output_directory/profiling/$world$iteration | tee temp_output.txt" C-m
+        
+        touch temp_output.txt
+        tmux send-keys -t 1 "ros2 launch drone_driver expertPilot.launch.py trace:=False out_dir:=$output_directory/profiling/$world$iteration | tee ./temp_output.txt" C-m
+        
+        sleep 5
 
         # Waits untill the drone is flying
-        while ! grep -q "Following" temp_output.txt; do
+        while ! grep -q "Following" ./temp_output.txt; do
             sleep 1
         done
-        rm temp_output.txt
-        sleep 2
+        rm ./temp_output.txt
+        sleep 5
 
         # Starts recording the topics
-        tmux send-keys -t 2 "ros2 bag record -o $output_directory/$world$iteration /drone0/sensor_measurements/frontal_camera/image_raw /drone0/self_localization/twist" C-m
+        tmux send-keys -t 2 "ros2 bag record -o $output_directory/$world$iteration /drone0/sensor_measurements/frontal_camera/image_raw /drone0/commanded_vels /tf" C-m
         sleep "$record_time"
 
         # Sends ctrl+C to end the simulation
@@ -57,7 +60,6 @@ tmux kill-pane -t 1
 tmux kill-window -t drone_recorder
 
 # Converts the rosbags to a general dataset
-cd ../src
-python3 rosbag2generalDataset.py --rosbags_path $output_directory
+python3 ../src/rosbag2generalDataset.py --rosbags_path $output_directory
 
-tmux kill-server
+# tmux kill-server

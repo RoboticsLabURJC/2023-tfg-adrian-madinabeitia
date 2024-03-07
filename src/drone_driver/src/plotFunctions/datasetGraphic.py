@@ -1,8 +1,6 @@
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+
 import numpy as np
-import ament_index_python
-from imblearn.over_sampling import RandomOverSampler
 import sys
 from ament_index_python.packages import get_package_share_directory
 
@@ -11,7 +9,7 @@ sys.path.append(package_path)
 
 from include.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
 
-DATA_PATH = "../../training_dataset"
+DATA_PATH = "../../training_dataset/expertPilot_V4"
 
 def plot_3d_bars(ax, x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
 
@@ -90,7 +88,7 @@ def get_labels(vels):
     
     labels = []
     for vel in vels:
-        labels.append(vel2label(vel[0], vel[1]/10))
+        labels.append(vel2label(vel[0], vel[1]/3))
 
     return labels
 
@@ -127,21 +125,20 @@ def main():
 
     # Gets the raw dataset
     data1= rosbagDataset(DATA_PATH, dataset_transforms, False, 1)
-    rawVels = [velocitys for image, velocitys in data1.dataset]
+    rawVels = [velocities for image, velocities in data1.dataset]
 
     # Gets the balanced dataset
-    balancedDataset = data1.balancedDataset()
-    balancedVels = [velocitys for image, velocitys in balancedDataset]
+    balancedVels = [velocities for image, velocities in data1.balancedDataset()]
 
     # Gets the augmented dataset
-    data2 = rosbagDataset(DATA_PATH, dataset_transforms, True, 2)
-    augmentedVels = []
-    for i in range(len(data2)):
-        velocity, image = data2[i]
-        augmentedVels.append(velocity.cpu().detach().numpy())
+    # data2 = rosbagDataset(DATA_PATH, dataset_transforms, False, 1)
+    # augmentedVels = []
+    # for i in range(len(data2)):
+    #     velocity, image = data2[i]
+    #     augmentedVels.append(velocity.cpu().detach().numpy())
     
 
-    graphData(["Raw datset", "Augmented dataset"], [rawVels, augmentedVels])
+    graphData(["Raw dataset", "Augmented dataset"], [rawVels, balancedVels])
 
 
 if __name__ == "__main__":

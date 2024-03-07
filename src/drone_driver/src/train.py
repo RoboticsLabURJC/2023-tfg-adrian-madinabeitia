@@ -20,6 +20,12 @@ from include.models import pilotNet
 
 writer = SummaryWriter()
 
+BATCH_SIZE = 100
+LEARNING_RATE=1e-4
+MOMENT=0.05
+
+TARGET_LOSS = 0.05
+TARGET_CONECUTIVE_LOSS = 4
 
 def should_resume():
     return "--resume" in sys.argv or "-r" in sys.argv
@@ -49,15 +55,15 @@ def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimiz
     dataset = rosbagDataset(datasetPath, dataset_transforms)
     dataset.balancedDataset()
 
-    train_loader = DataLoader(dataset, batch_size=10, shuffle=True)
+    train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
 
     print("Starting training")
     
     consecutiveEpochs = 0  
-    targetLoss = 0.5
-    limitEpochs = 1000
+    targetLoss = TARGET_LOSS
+    epoch = 0
 
-    for epoch in range(limitEpochs):
+    while consecutiveEpochs != TARGET_CONECUTIVE_LOSS:
 
         epoch_loss = 0.0  
         for i, data in enumerate(train_loader, 0):
@@ -80,34 +86,29 @@ def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimiz
             # Loss graphic
             writer.add_scalar("Loss/train", loss, epoch)
 
-            # Saves the model
-            if i % 10 == 0:    # print every 2000 mini-batches
-                # print('[%d, %5d] loss: %.3f' %
-                #       (epoch + 1, i + 1, loss))
+            # Saves the model each 20 iterations
+            if i % 20 == 0:
                 save_checkpoint(checkpointPath, model, optimizer)
+
+        epoch += 1
 
         # Loss each epoch
         averageLoss = epoch_loss / len(train_loader)
-        print('Epoch {} - Average Loss: {:.3f}'.format(epoch + 1, averageLoss))
+        print('Epoch {} - Average Loss: {:.3f}'.format(epoch, averageLoss))
 
-        # End criteria succeded?
+        # End criteria succeeded?
         if averageLoss <= targetLoss:
             consecutiveEpochs += 1
         else:
             consecutiveEpochs = 0
 
-        # Ends the training in n consecutive epochs with creteria succeded
-        if consecutiveEpochs == 4:
-            print('Training terminated. Consecutive epochs with average loss <= 0.5.')
-            break
-
-    print('Finished Training')
+    print('Training terminated. Consecutive epochs with average loss <= ', targetLoss)
 
 
 def main(filePath, datasetPath):
 
     model = pilotNet()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.05)
+    optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=MOMENT)
 
     # Loads if theres another model
     if should_resume():

@@ -1,9 +1,7 @@
 import os
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess, LogInfo
-from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.actions import ExecuteProcess
 from launch_ros.actions import Node
 
 namespace= "drone0"
@@ -14,20 +12,6 @@ def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
     worlds_dir = os.path.join(get_package_share_directory('drone_driver'), 'worlds')
     tmux_yml = os.path.join(get_package_share_directory('drone_driver'), 'config/tmuxLaunch.yml')
-
-    # # Default gazebo launch 
-
-    # gazebo = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource([os.path.join(
-    #         get_package_share_directory('gazebo_ros'), 'launch'), '/gazebo.launch.py']),
-
-    #     launch_arguments={
-    #         'world': worlds + 'ocean_simulation.world',
-    #         'namespace': LaunchConfiguration('namespace'),
-    #         'use_sim_time': LaunchConfiguration('sim_time'),
-    #         'simulation_config_file': sim_config + '/world.json'
-    #     }.items(),
-    # )
 
     # Px4 autopilot gazebo launch
     gazeboPx4 = ExecuteProcess(

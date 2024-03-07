@@ -20,9 +20,7 @@ package_path = ament_index_python.get_package_share_directory("drone_driver")
 sys.path.append(package_path)
 
 from include.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling, search_farthest_column
-from droneExpertPilot import BOTTOM_LIMIT_UMBRAL, UPPER_LIMIT_UMBRAL
-
-
+from droneExpertPilot import NUM_POINTS, SPACE
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360
@@ -38,7 +36,6 @@ MIN_RANGE = 10
 # Trace parameters
 TRACE_COLOR = [0, 255, 0]
 RADIUS = 2
-
 
 class imageFilterNode(Node):
 
@@ -67,15 +64,28 @@ class imageFilterNode(Node):
         top_point = search_top_line(mono_img)
         bottom_point = search_bottom_line(mono_img)
 
-        red_farest = band_midpoint(mono_img, top_point, top_point + UPPER_LIMIT_UMBRAL)
-        red_nearest = band_midpoint(mono_img, bottom_point - BOTTOM_LIMIT_UMBRAL, bottom_point)
 
         # Image to 3 channels
         mono_img_color = cv2.merge([mono_img, mono_img, mono_img])
 
-        # Dibujar los puntos en verde en la imagen original
-        cv2.circle(mono_img_color, (red_farest[0], top_point), 5, (0, 255, 0), -1) 
-        cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1) 
+        topPoint = search_top_line(mono_img)
+        bottomPoint = search_bottom_line(mono_img)
+        lineDiv = NUM_POINTS
+
+        error = 0
+        # self.get_logger().info("%d %d" % (bottomPoint, topPoint))
+        intervals = (bottomPoint - topPoint) / lineDiv
+        if int(intervals) != 0:
+            for i in range(0, (bottomPoint - topPoint), int(intervals)):
+                error = band_midpoint(mono_img, topPoint + i - SPACE , topPoint + i + 1)
+                #self.get_logger().info("%d %d %d" % (error[0], error[1], i))
+
+
+                # Draws the points in the original image
+                cv2.circle(mono_img_color, (int(error[0]), int(i + top_point)), 5, (0, 255, 0), -1) 
+
+
+            #cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1) 
         cv2.circle(mono_img_color, (distancePoint, top_point), 5, (255, 0, 0), -1) 
         # Show the image
         cv2.imshow(label, mono_img_color)
@@ -91,8 +101,8 @@ class imageFilterNode(Node):
         return red_mask
 
     def image_aperture(self, mask):
-        erosion_kernel = np.ones((2, 2), np.uint8)
-        dilate_kernel = np.ones((7, 7), np.uint8)
+        erosion_kernel = np.ones((1, 1), np.uint8)
+        dilate_kernel = np.ones((10, 10), np.uint8)
         n_erosion = 1
         n_dilatation = 1
 
@@ -103,7 +113,7 @@ class imageFilterNode(Node):
         return dilated_mask
     
     def filter_contours(self, contours):
-        limit_area = 100
+        limit_area = 20
         
         # Filters small contours
         big_contours = [contour for contour in contours if cv2.contourArea(contour) > limit_area]
@@ -119,7 +129,7 @@ class imageFilterNode(Node):
 
     def listener_callback(self, msg):
 
-        CallinitTime = time.time()
+        CallInitTime = time.time()
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
 
@@ -133,7 +143,7 @@ class imageFilterNode(Node):
         self.profiling.append(f"\nFilter time = {time.time() - initTime}")
 
 
-        # Draws tonly the big contour
+        # Draws only the big contour
         initTime = time.time()
         mono_img = np.zeros_like(img)
 
@@ -146,13 +156,13 @@ class imageFilterNode(Node):
         msg = bridge.cv2_to_imgmsg(mono_img, encoding="mono8")
         self.filteredPublisher_.publish(msg)
 
-        self.profiling.append(f"\nCallback time = {time.time() - CallinitTime}")
+        self.profiling.append(f"\nCallback time = {time.time() - CallInitTime}")
 
         # Traces
 
         # Display the image with contours
         if self.traceBool:
-            self.show_trace("Countors: ", mono_img, img)
+            self.show_trace("Outline: ", mono_img, img)
 
 
 def main(args=None):

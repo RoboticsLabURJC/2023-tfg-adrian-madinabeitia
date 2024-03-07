@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-# Execute as => python3 train.py --n network2.tar
-
-from rosbags.rosbag2 import Reader as ROS2Reader
 import torch
 import matplotlib.pyplot as plt
 import random
@@ -17,12 +14,13 @@ import torchvision.transforms.functional as F
 import os
 from PIL import Image
 
-ANGULAR_UMBRALS = [-0.3, -0.1, 0, 0.1, 0.3, float('inf')]  # label < umbral
-LINEAR_UMBRALS = [5, 5.5, float('inf')]
+ANGULAR_UMBRALS = [-0.5, -0.2, 0, 0.2, 0.5, float('inf')]  # label < umbral
+LINEAR_UMBRALS = [4.5, 5.5, float('inf')]
 
 DATA_PATH = "../training_dataset"
-LOWER_LIMIT = 0
-UPPER_LIMIT = 3
+
+USE_WEIGHTS = True       # 0 false   1 false    2 True
+USE_AUGMENTATION = True  # 0 false   1 true     3 True
 
 def get_image_dataset(folder_path):
     images = []
@@ -48,7 +46,7 @@ def get_image_dataset(folder_path):
             images.append(image_array)
 
     except FileNotFoundError:
-        print("Error: Carpeta no encontrada.")
+        print("Error: File not found.")
 
     return images
 
@@ -74,19 +72,19 @@ def get_vels(folder_path):
                 content = file.read()
                 numbers = [float(num) for num in content.split(',')]
 
-                vels.append([numbers[0], numbers[1]*10])
+                vels.append([numbers[0], numbers[1]*3])
 
     except FileNotFoundError:
-        print("Error: Carpeta no encontrada.")
+        print("Error: File not found.")
     
     return vels
 
 class rosbagDataset(Dataset):
-    def __init__(self, main_dir, transform, boolAug=False, dataAument=1) -> None:
+    def __init__(self, main_dir, transform, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
         self.main_dir = main_dir
         self.transform = transform
-        self.minSamples = 25
-        self.dataAument = dataAument
+        self.minSamples = 10
+        self.dataAugment = dataAugment
         
         self.imgData = get_image_dataset(main_dir + "/frontal_images")
         self.velData = get_vels(main_dir + "/labels")
@@ -102,7 +100,7 @@ class rosbagDataset(Dataset):
         dataset = list(((self.imgData[i], self.velData[i]) for i in range(len(self.velData))))
 
         original_size = len(dataset)
-        new_size = int(original_size * self.dataAument)
+        new_size = int(original_size * self.dataAugment)
 
         for _ in range(new_size - original_size):
             randIndex = random.randint(0, original_size - 1)
@@ -115,12 +113,12 @@ class rosbagDataset(Dataset):
     def __getitem__(self, item):
         device = torch.device("cuda:0")
         
-        # Applys augmentation
+        # Apply augmentation
         if self.applyAug:
             image_tensor = torch.tensor(self.dataset[item][0]).to(device)
-            image_tensor, vel_tensor = self.applayAugmentation(device, image_tensor, self.dataset[item][1])
+            image_tensor, vel_tensor = self.applyAugmentation(device, image_tensor, self.dataset[item][1])
 
-        # Not applys augmentation
+        # Not apply augmentation
         else:
             image_tensor = self.transform(self.dataset[item][0]).to(device)
             vel_tensor = torch.tensor(self.dataset[item][1]).to(device)
@@ -128,51 +126,52 @@ class rosbagDataset(Dataset):
         return (vel_tensor, image_tensor)
     
     
-    def applayAugmentation(self, device, imageTensor, velocityValue):
-        mov = 10
+    def applyAugmentation(self, device, imgTensor, velocityValue):
+        mov = 2
 
-        # Aplys color augmentation 
-        augmented_image_tensor = self.colorAugmeentation()(image=imageTensor.cpu().numpy())['image']
-        imgTensor = torch.tensor(augmented_image_tensor).to(device)
+        # Apply color augmentation 
+        augmented_image_tensor = self.colorAugmentation()(image=imgTensor.cpu().numpy())['image']
+        imageTensor = torch.tensor(augmented_image_tensor).clone().detach().to(device)
+
 
         randNum = random.randint(0, 7)
 
         # Flips the image so the angular will be in opposite way    
         if randNum == 3 or randNum == 4:    # 2 / 8 chance
-            imgTensor = torch.flip(imgTensor, dims=[-1])
+            imageTensor = torch.flip(imageTensor, dims=[-1])
             velTensor = torch.tensor((velocityValue[0], -velocityValue[1])).to(device)
 
         # Horizontal movement
-        elif randNum == 2:                  # 1 / 8 chance
+        elif randNum == 20:                  # 1 / 8 chance
             randMove = random.randint(-mov, mov)
-            imgTensor = F.affine(imgTensor, angle=0, translate=(randNum, 0), scale=1, shear=0)
+            imageTensor = F.affine(imageTensor, angle=0, translate=(randNum, 0), scale=1, shear=0)
             velTensor = torch.tensor((velocityValue[0], velocityValue[1] + randMove/(mov*2))).to(device)
 
         # Vertical movement
-        elif randNum == 1:                  # 1 / 8 chance
+        elif randNum == 10:                  # 1 / 8 chance
             randMove = random.randint(-mov, mov)
-            imgTensor = F.affine(imgTensor, angle=0, translate=(0, randMove), scale=1, shear=0)
+            imageTensor = F.affine(imageTensor, angle=0, translate=(0, randMove), scale=1, shear=0)
             velTensor = torch.tensor((velocityValue[0] - randMove/(mov*1.5), velocityValue[1])).to(device)
         
         else:   # No changes                # 4 / 8 chance
             velTensor = torch.tensor(velocityValue).to(device)
 
-        return imgTensor, velTensor
+        finalImgTensor = self.transform(imageTensor.cpu().numpy()).to(device)
+        return finalImgTensor, velTensor
 
-    def colorAugmeentation(self, p=0.5):
+    def colorAugmentation(self, p=0.5):
         return A.Compose([
             A.HorizontalFlip(p=p),
             A.RandomBrightnessContrast(),
-            A.Normalize(),
-            ToTensorV2(),
+            A.Normalize()
         ])
         
 
     def subSample(self, label, percent):
         toDel = int(len(label) * percent)
-        subsampled = random.sample(label, len(label) - toDel)
+        subsample = random.sample(label, len(label) - toDel)
 
-        return subsampled
+        return subsample
 
     def getLinearSubset(self, dataset, lowerBound, upperBound):
         linearSub = [(img, vel) for img, vel in dataset if lowerBound < vel[0] <= upperBound]
@@ -180,7 +179,7 @@ class rosbagDataset(Dataset):
         return linearSub
     
     def getAngularSubset(self, dataset, lowerBound, upperBound):
-        angularSub = [(img, vel) for img, vel in dataset if lowerBound < vel[1]/10 <= upperBound]
+        angularSub = [(img, vel) for img, vel in dataset if lowerBound < vel[1]/3 <= upperBound]
 
         # Gets the linear subsets
         angularLabeled = [self.getLinearSubset(angularSub, float('-inf'), LINEAR_UMBRALS[0])]
@@ -192,14 +191,14 @@ class rosbagDataset(Dataset):
 
     
     def balancedDataset(self):
-        useWeights = False
+        useWeights = USE_WEIGHTS
         #   <       5     5.5   inf
-        weights = [(0.80, 0.0, 0.0),     # < -0.6
-                   (0.90, 0.7, 0.4),     # < -0.3
-                   (0.50, 0.5, 0.99),    # < 0
-                   (0.50, 0.5, 0.99),    # < 0.3
-                   (0.80, 0.7, 0.4),     # < 0.6
-                   (0.90, 0.0, 0.0)]      # < inf
+        weights = [(0.99, 0.3, 0.2),     # < -0.6
+                   (0.80, 0.8, 0.4),     # < -0.3
+                   (0.60, 0.7, 0.99),    # < 0
+                   (0.60, 0.7, 0.99),    # < 0.3
+                   (0.80, 0.8, 0.4),     # < 0.6
+                   (0.99, 0.3, 0.2)]      # < inf
 
 
         # Gets all the subsets
@@ -216,10 +215,10 @@ class rosbagDataset(Dataset):
                 if len(linLabeled) > maxSamples:
                     maxSamples = len(linLabeled)
 
-        # Auments the data
-        maxSamples = int(maxSamples * self.dataAument)        
+        # Augments the data
+        maxSamples = int(maxSamples * self.dataAugment)        
         
-        # Balances all the clases
+        # Balances all the classes
         balancedDataset = []
 
         for i, angLabeled in enumerate(labeledDataset):
@@ -231,7 +230,7 @@ class rosbagDataset(Dataset):
                 
                 if currentSubsetLen >= self.minSamples:
 
-                    # Checks if thers enought samples
+                    # Checks if there's enough samples
                     if currentSubsetLen < maxSamples:
 
                         # If the current length is less than maxSamples, we replicate the elements
@@ -243,7 +242,7 @@ class rosbagDataset(Dataset):
                         # If the current length is greater than or equal to maxSamples, we subsample
                         balancedSubset = random.sample(currentSubset, maxSamples)
                     
-                    # Subsamples if it is
+                    # Subsample
                     if useWeights:
                         # Adjusts to weights
                         balancedSubset = self.subSample(balancedSubset, 1 - weights[i][j])
@@ -260,7 +259,7 @@ class rosbagDataset(Dataset):
                 for data in linLabeled:
                     rawDataset.append(data)
 
-
+        self.dataset = rawDataset
         return rawDataset
 
 
@@ -272,19 +271,18 @@ dataset_transforms = transforms.Compose([
 
 if __name__ == "__main__":
 
-    # Crear una instancia de tu conjunto de datos
-    dataset = rosbagDataset(main_dir=DATA_PATH, transform=dataset_transforms, boolAug=True, dataAument=2)
+    # Creates data instance
+    dataset = rosbagDataset(main_dir=DATA_PATH, transform=dataset_transforms, boolAug=True, dataAugment=2)
 
-    # Mostrar algunas imágenes y sus velocidades asociadas
-    for i in range(15):  # Mostrar las primeras 5 imágenes
+    # Shows some images with the augmentation 
+    for i in range(15): 
         idx = random.randint(0, len(dataset) - 1)
         velocity, image = dataset[idx]
 
-        # Deshacer el cambio de forma y la normalización para mostrar la imagen correctamente
         image = image.permute(1, 2, 0).cpu().numpy()
-        image = (image * 0.5) + 0.5  # Desnormalizar
+        image = (image * 0.5) + 0.5 
 
-        # Mostrar la imagen y su velocidad asociada
+        # Shows the image and the associated velocity 
         plt.imshow(image)
         plt.title(f"Velocidad: {velocity}")
         plt.show()

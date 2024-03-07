@@ -23,11 +23,11 @@ class RosbagDataset(Dataset):
             ros2_messages = ros2_reader.messages(connections=ros2_conns)
 
             for m, msg in enumerate(ros2_messages):
-                (connection, timestamp, rawdata) = msg
+                (connection, timestamp, rawData) = msg
 
-                # Searchs the tf topic
+                # Search the tf topic
                 if connection.topic == tf_topic:
-                    data = deserialize_cdr(rawdata, connection.msgtype)
+                    data = deserialize_cdr(rawData, connection.msgtype)
 
                     # Appends the data in the lists
                     x_path.append(data.transforms[0].transform.translation.x)

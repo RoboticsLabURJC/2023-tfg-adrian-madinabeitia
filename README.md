@@ -10,11 +10,12 @@ Versions
 Ros Humble
 Gazebo 11.10.2 -->
 
-<!-- Instalación de tmux -->
+<!-- Tmux installation -->
 
 <!-- ---
 --- -->
 ## Manually
+
 1. For launch only the world
 
 ```bash
@@ -30,13 +31,14 @@ ros2 ros2 launch drone_driver expertPilot.launch.py out_dir:=TRACES_DIR trace:=B
 ## Automation scripts
 
 ### Dataset generator
+
 1. Go to utils directory
 
 ```bash
 cd PATH_TO_WORKSPACE/src/drone_driver/utils
 ```
 
-2. Open a tmux sesion
+2. Open a tmux session
 
 ```bash
 tmux
@@ -47,19 +49,21 @@ tmux
 ```bash
 ./generateDataset.sh TIME_RECORDING DATASET_PATH
 ```
+
 * **Time recording:** Int -> Time recording the topics of the drone.
 * **Dataset path** String -> Path where the dataset and profiling data are located.will be save.
 
 ---
 
 ### Training script
+
 1. Go to utils directory
 
 ```bash
 cd PATH_TO_WORKSPACE/src/drone_driver/utils
 ```
 
-2. Open a tmux sesion
+2. Open a tmux session
 
 ```bash
 tmux

@@ -38,7 +38,7 @@ def generate_launch_description():
         name="gazebo",
         additional_env=env_vars,
 
-        # Closes the tmux sesion on gazebo exit
+        # Closes the tmux session on gazebo exit
         on_exit=[
             OpaqueFunction(
                 function=exit_process_function,
@@ -60,10 +60,10 @@ def generate_launch_description():
     )
 
     tmuxAttach = ExecuteProcess(
-        # Aerostack2 depuration
+        # Aerostack2 terminal
         # cmd=['gnome-terminal', '--', 'tmux', 'attach-session', '-t', namespace],
 
-        # No aditional window
+        # No additional window
         cmd=['tmux', 'attach-session', '-t', namespace],
         name="attach",
     )

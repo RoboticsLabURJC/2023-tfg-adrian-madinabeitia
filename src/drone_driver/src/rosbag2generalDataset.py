@@ -17,9 +17,9 @@ class rosbagDataset(Dataset):
         self.firstImgTimestamp = -1
 
         self.lastVelTimestamp = 0
-        self.asocciatedImage = False
+        self.associatedImage = False
         self.lastImgTimestamp = 0
-        self.asocciatedVel = True       
+        self.associatedVel = True       
 
     def transform_data(self, img_topic, vel_topic):
 
@@ -44,36 +44,36 @@ class rosbagDataset(Dataset):
                     ros2_messages = ros2_reader.messages(connections=ros2_conns)
 
 
-                    # Generates all the mesaures of the topic
+                    # Generates all the measures of the topic
                     for m, msg in enumerate(ros2_messages):
-                        (connection, timestamp, rawdata) = msg
+                        (connection, timestamp, rawData) = msg
 
                         # Checks if it is the velocities topic
                         if connection.topic == vel_topic:
-                            data = deserialize_cdr(rawdata, connection.msgtype)
-                            angular = data.twist.angular.z
+                            data = deserialize_cdr(rawData, connection.msgtype)
+                            angular = data.y
 
                             # Conversion global frame to local frame
-                            linear = data.twist.linear.x
+                            linear = data.x
 
                             # Checks the first timestamp
                             if self.firstVelTimestamp == -1:
                                 self.firstVelTimestamp = timestamp
 
-                            if timestamp >= self.lastVelTimestamp and not self.asocciatedVel:
+                            if timestamp >= self.lastVelTimestamp and not self.associatedVel:
                                 # Save the data into a .txt
                                 output_path = os.path.join(labels_folder_path, f"{folderNum}_{m}.txt")
                                 with open(output_path, "w") as txt_file:
                                     txt_file.write(f"{linear}, {angular}\n")
-                                self.asocciatedImage = False
+                                self.associatedImage = False
 
                                 self.lastImgTimestamp = timestamp
-                                self.asocciatedVel = True
+                                self.associatedVel = True
 
 
                         # Checks if it is the image topic
                         if connection.topic == img_topic:
-                            data = deserialize_cdr(rawdata, connection.msgtype)
+                            data = deserialize_cdr(rawData, connection.msgtype)
 
                             # Converts the image into a readable format
                             img = np.array(data.data, dtype=data.data.dtype)
@@ -83,16 +83,16 @@ class rosbagDataset(Dataset):
                             if self.firstImgTimestamp == -1:
                                 self.firstImgTimestamp = timestamp
 
-                            if timestamp >= self.lastImgTimestamp and not self.asocciatedImage:
+                            if timestamp >= self.lastImgTimestamp and not self.associatedImage:
                                 # Save the data into a .jpg
                                 output_path = os.path.join(img_folder_path, f"{folderNum}_{m}.jpg")
                                 resized = cv2.resize(cvImage, (160, 120))
                                 cv2.imwrite(output_path, cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
                                 
-                                self.asocciatedVel = False
+                                self.associatedVel = False
 
                                 self.lastVelTimestamp = timestamp
-                                self.asocciatedImage = True
+                                self.associatedImage = True
 
             except:
                 print("Folder", rosbag_dir , "is not a rosbag")
@@ -113,7 +113,7 @@ def main():
     dataset = rosbagDataset(args.rosbags_path)
 
     img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
-    vel_topic = "/drone0/self_localization/twist"
+    vel_topic = "/drone0/commanded_vels"
 
     dataset.transform_data(img_topic, vel_topic)
 
