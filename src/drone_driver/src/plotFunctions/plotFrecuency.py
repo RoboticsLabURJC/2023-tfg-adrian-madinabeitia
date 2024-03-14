@@ -25,9 +25,9 @@ def plot_frequency(timestamps):
 
 
 def main():
-    data = np.load("./sub_timestamps.npy")
+    #data = np.load("./sub_timestamps.npy")
     data2 = np.load("./vel_timestamps.npy")
-    plot_frequency([data, data2])
+    plot_frequency([data2])
 
 if __name__ == "__main__":
     main()

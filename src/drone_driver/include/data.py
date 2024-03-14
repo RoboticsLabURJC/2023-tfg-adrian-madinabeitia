@@ -14,13 +14,18 @@ import torchvision.transforms.functional as F
 import os
 from PIL import Image
 
+# General velocity's
+MAX_ANGULAR = 2.0
+MAX_LINEAR = 6.3
+MIN_LINEAR = 3.0
+
+# Labels
 ANGULAR_UMBRALS = [-0.5, -0.2, 0, 0.2, 0.5, float('inf')]  # label < umbral
 LINEAR_UMBRALS = [4.5, 5.5, float('inf')]
 
-DATA_PATH = "../training_dataset"
-
-USE_WEIGHTS = True       # 0 false   1 false    2 True
-USE_AUGMENTATION = True  # 0 false   1 true     3 True
+# General aspects
+USE_WEIGHTS = True
+USE_AUGMENTATION = False
 
 def get_image_dataset(folder_path):
     images = []
@@ -71,13 +76,15 @@ def get_vels(folder_path):
             with open(file_path, 'r') as file:
                 content = file.read()
                 numbers = [float(num) for num in content.split(',')]
-
+        
                 vels.append([numbers[0], numbers[1]*3])
 
     except FileNotFoundError:
         print("Error: File not found.")
     
     return vels
+
+
 
 class rosbagDataset(Dataset):
     def __init__(self, main_dir, transform, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
@@ -109,22 +116,25 @@ class rosbagDataset(Dataset):
         return dataset
 
 
-
     def __getitem__(self, item):
         device = torch.device("cuda:0")
         
+        angular = (self.dataset[item][1][1] + MAX_ANGULAR) / (2 * MAX_ANGULAR)
+        lineal = (self.dataset[item][1][0] + MIN_LINEAR) / (MAX_LINEAR - MIN_LINEAR)
+        norm = (lineal, angular)
+
         # Apply augmentation
         if self.applyAug:
             image_tensor = torch.tensor(self.dataset[item][0]).to(device)
-            image_tensor, vel_tensor = self.applyAugmentation(device, image_tensor, self.dataset[item][1])
+            image_tensor, vel_tensor = self.applyAugmentation(device, image_tensor, norm)
 
         # Not apply augmentation
         else:
             image_tensor = self.transform(self.dataset[item][0]).to(device)
-            vel_tensor = torch.tensor(self.dataset[item][1]).to(device)
+            vel_tensor = torch.tensor(norm).to(device)
 
-        return (vel_tensor, image_tensor)
-    
+            
+        return (vel_tensor, image_tensor)    
     
     def applyAugmentation(self, device, imgTensor, velocityValue):
         mov = 2
@@ -192,14 +202,20 @@ class rosbagDataset(Dataset):
     
     def balancedDataset(self):
         useWeights = USE_WEIGHTS
-        #   <       5     5.5   inf
-        weights = [(0.99, 0.3, 0.2),     # < -0.6
-                   (0.80, 0.8, 0.4),     # < -0.3
-                   (0.60, 0.7, 0.99),    # < 0
-                   (0.60, 0.7, 0.99),    # < 0.3
-                   (0.80, 0.8, 0.4),     # < 0.6
-                   (0.99, 0.3, 0.2)]      # < inf
+        # #   <       5     5.5   inf       Weights 1
+        # weights = [(0.99, 0.3, 0.2),     # < -0.6
+        #            (0.80, 0.8, 0.4),     # < -0.3
+        #            (0.60, 0.7, 0.99),    # < 0
+        #            (0.60, 0.7, 0.99),    # < 0.3
+        #            (0.80, 0.8, 0.4),     # < 0.6
+        #            (0.99, 0.3, 0.2)]      # < inf
 
+        weights = [(0.85, 0.15, 0.25),     # < -0.6
+                   (0.65, 0.55, 0.45),     # < -0.3
+                   (0.35, 0.75, 0.995),    # < 0
+                   (0.35, 0.75, 0.995),    # < 0.3
+                   (0.65, 0.55, 0.45),     # < 0.6
+                   (0.85, 0.15, 0.25)]      # < inf
 
         # Gets all the subsets
         labeledDataset = [self.getAngularSubset(self.dataset, float('-inf'), ANGULAR_UMBRALS[0])]
@@ -267,22 +283,3 @@ dataset_transforms = transforms.Compose([
     transforms.ToTensor(),
     transforms.Resize([66, 200]),
 ])
-
-
-if __name__ == "__main__":
-
-    # Creates data instance
-    dataset = rosbagDataset(main_dir=DATA_PATH, transform=dataset_transforms, boolAug=True, dataAugment=2)
-
-    # Shows some images with the augmentation 
-    for i in range(15): 
-        idx = random.randint(0, len(dataset) - 1)
-        velocity, image = dataset[idx]
-
-        image = image.permute(1, 2, 0).cpu().numpy()
-        image = (image * 0.5) + 0.5 
-
-        # Shows the image and the associated velocity 
-        plt.imshow(image)
-        plt.title(f"Velocidad: {velocity}")
-        plt.show()

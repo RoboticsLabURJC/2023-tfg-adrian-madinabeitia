@@ -34,7 +34,7 @@ def plot_2d(ax, vels):
 
     # Divides angular vels
     for i in range(len(angVel)):
-        dividedVels.append(angVel[i] / 10)
+        dividedVels.append(angVel[i] / 3)
 
     # Sets the labels
     ax.set_xlabel("Linear vel")

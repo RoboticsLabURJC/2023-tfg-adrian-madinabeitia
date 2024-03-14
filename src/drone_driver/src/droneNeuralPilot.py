@@ -23,12 +23,14 @@ sys.path.append(package_path)
 from include.control_functions import PID, save_timestamps, save_profiling
 from include.models import pilotNet
 from train import load_checkpoint
-from include.data import dataset_transforms
+from include.data import dataset_transforms, MAX_ANGULAR, MIN_LINEAR, MAX_LINEAR
 
 # Vel control
 MAX_Z = 2
+LINEAL_ARRAY_LENGTH = 150
+REDUCTION = 3.5
 
-## PID controlers
+## PID controllers
 Z_KP = 0.5
 Z_KD = 0.45
 Z_KI = 0.0
@@ -64,6 +66,8 @@ class droneNeuralController(DroneInterface):
 
         self.cv_image = None
         self.imageTensor = None
+        self.lastVels = []
+        self.lastAngular = []
 
 
         # Folder name
@@ -74,7 +78,7 @@ class droneNeuralController(DroneInterface):
 
     def save_data(self):
 
-        # Creats the directory 
+        # Creates the directory 
         os.makedirs(self.profilingDir, exist_ok=True)
 
         # Saves all the data
@@ -99,7 +103,7 @@ class droneNeuralController(DroneInterface):
 
         self.profiling.append(f"Tensor conversion time = {time.time() - initTime}")
 
-    # Retrys aerostack command if it failed
+    # Retry aerostack command if it failed
     def retry_command(self, command, check_func, sleep_time=1.0, max_retries=1):
         if not check_func():
             command()
@@ -148,7 +152,7 @@ class droneNeuralController(DroneInterface):
     
 
     def set_vel2D(self, vx, vy, pz, yaw):
-        # Gets the drone velocitys
+        # Gets the drone velocity's
         velX = vx * math.cos(self.orientation[2]) + vy * math.sin(self.orientation[2])
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
         
@@ -162,7 +166,7 @@ class droneNeuralController(DroneInterface):
         
 
     def set_vel(self, vx, vy, vz, yaw):
-        # Gets the drone velocitys
+        # Gets the drone velocity's
         velX = vx * math.cos(self.orientation[2]) + vy * math.sin(self.orientation[2])
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
 
@@ -179,19 +183,30 @@ class droneNeuralController(DroneInterface):
             vels = self.model(self.imageTensor)[0].tolist()
 
         self.profiling.append(f"\nAngular inference = {time.time() - initTime}")
-        return vels
+
+        angular = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / REDUCTION
+        lineal = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)
+
+        return (lineal, angular)
 
 
     def follow_line(self):
         if self.info['state'] == PlatformStatus.FLYING:
             initTime = time.time()
 
-            # Gets drone velocitys
+            # Gets drone velocity's
             vels = self.get_vels()
+
+            self.lastVels.append(vels[0])
+            if len(self.lastVels) > LINEAL_ARRAY_LENGTH:
+                self.lastVels.pop(0)
+            
+            linearVel = np.mean(self.lastVels)
+
             self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (vels[0], vels[1]))
 
             # Set the velocity
-            self.set_vel2D(float(vels[0]), 0, MAX_Z, float(vels[1]/3))
+            self.set_vel2D(float(linearVel), 0, MAX_Z, float(vels[1]))
 
             # Profiling
             self.vel_timestamps.append(time.time())

@@ -9,7 +9,7 @@ if [ -z "$record_time" ] || [ -z "$output_directory" ]; then
     exit 1
 fi
 
-worlds=( "simple_circuit" "montmelo_line" "nurburgring_line")
+worlds=( "simple_circuit" "montmelo_line" "montreal_line")
 orientations=(0.0 3.14)
 
 tmux new-window -n drone_recorder

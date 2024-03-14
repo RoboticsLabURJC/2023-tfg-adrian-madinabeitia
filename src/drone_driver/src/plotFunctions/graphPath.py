@@ -44,8 +44,8 @@ def plot_route(path, label):
 
 def get_lap_time(path):
     # Gets the time between each lap
-    for i in range(int(len(path) / 4)):
-        for j in range(int(len(path) / 4)):
+    for i in range(int(len(path) / 2)):
+        for j in range(int(len(path) / 2)):
 
             if abs(path[i][0] - path[-j][0]) < 0.1 and abs(path[i][1] - path[-j][1]) < 0.1 and abs(i - j) > 20:
 
@@ -79,7 +79,9 @@ def get_lap_error(refPath, path):
     for i in range(len(path)):
         # Corrects the trajectory
         for j in range(slack):
-            ind = (index + j) % len(refPath)
+            ind = (index + j)
+            if ind > len(path):
+                ind = ind - len(path)
 
             # Euclidean distance
             dist = math.sqrt((refPath[ind][0] - path[i][0])**2 + (refPath[ind][1] - path[i][1])**2)
@@ -96,7 +98,7 @@ def get_lap_error(refPath, path):
         
 
 
-def main(perfectPath, expertPath, neuralPath):
+def main(perfectPath, expertPath, neuralPath, fileName):
 
     # Gets the rosbags
     dataset1 = RosbagDataset(perfectPath)
@@ -133,8 +135,10 @@ def main(perfectPath, expertPath, neuralPath):
     plt.title('Results')
     plt.xlabel('x')
     plt.ylabel('y')
+
     plt.legend()
-    plt.show()
+    plt.savefig(fileName)
+    # plt.show()
 
 
 if __name__ == "__main__":
@@ -142,6 +146,7 @@ if __name__ == "__main__":
     parser.add_argument('--perfect_path', type=str, required=True)
     parser.add_argument('--expert_path', type=str, required=True)
     parser.add_argument('--neural_path', type=str, required=True)
+    parser.add_argument('--file_name', type=str, default="./plot.png")
 
     args = parser.parse_args()
-    main(args.perfect_path, args.expert_path, args.neural_path)
+    main(args.perfect_path, args.expert_path, args.neural_path, args.file_name)

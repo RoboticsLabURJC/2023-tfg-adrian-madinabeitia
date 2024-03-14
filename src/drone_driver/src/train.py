@@ -20,12 +20,14 @@ from include.models import pilotNet
 
 writer = SummaryWriter()
 
+
+
 BATCH_SIZE = 100
 LEARNING_RATE=1e-4
 MOMENT=0.05
 
-TARGET_LOSS = 0.05
-TARGET_CONECUTIVE_LOSS = 4
+TARGET_LOSS = 0.005#0.05
+TARGET_CONSECUTIVE_LOSS = 4
 
 def should_resume():
     return "--resume" in sys.argv or "-r" in sys.argv
@@ -63,7 +65,7 @@ def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimiz
     targetLoss = TARGET_LOSS
     epoch = 0
 
-    while consecutiveEpochs != TARGET_CONECUTIVE_LOSS:
+    while consecutiveEpochs != TARGET_CONSECUTIVE_LOSS:
 
         epoch_loss = 0.0  
         for i, data in enumerate(train_loader, 0):
