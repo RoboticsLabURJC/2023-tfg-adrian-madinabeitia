@@ -15,6 +15,7 @@ import ament_index_python
 import torch
 import argparse
 import os
+from geometry_msgs.msg import Point
 
 # Package includes
 package_path = ament_index_python.get_package_share_directory("drone_driver")
@@ -28,6 +29,7 @@ from include.data import dataset_transforms, MAX_ANGULAR, MIN_LINEAR, MAX_LINEAR
 # Vel control
 MAX_Z = 2
 LINEAL_ARRAY_LENGTH = 150
+ANGULAR_ARRAY_LENGTH = 1
 REDUCTION = 3.5
 
 ## PID controllers
@@ -44,6 +46,7 @@ class droneNeuralController(DroneInterface):
         super().__init__(drone_id, verbose, use_sim_time)
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
 
+        self.velPublisher_ = self.create_publisher(Point, 'commanded_vels', 10)
         self.imageSubscription = self.create_subscription(Image, '/drone0/sensor_measurements/frontal_camera/image_raw', self.listener_callback, 1)
 
         # Gets the trained model
@@ -60,7 +63,7 @@ class droneNeuralController(DroneInterface):
         self.linearVel = 0
 
         # Frequency analysis 
-        self.image_timestamps = []
+        self.generalTimestamps = []
         self.vel_timestamps = []
         self.profiling = []
 
@@ -68,7 +71,6 @@ class droneNeuralController(DroneInterface):
         self.imageTensor = None
         self.lastVels = []
         self.lastAngular = []
-
 
         # Folder name
         self.profilingDir = output_directory
@@ -82,13 +84,11 @@ class droneNeuralController(DroneInterface):
         os.makedirs(self.profilingDir, exist_ok=True)
 
         # Saves all the data
-        save_timestamps(self.profilingDir + '/sub_timestamps.npy', self.image_timestamps)
+        save_timestamps(self.profilingDir + '/general_timestamps.npy', self.generalTimestamps)
         save_timestamps(self.profilingDir + '/vel_timestamps.npy', self.vel_timestamps)
         save_profiling(self.profilingDir + '/profiling_data.txt', self.profiling)
 
     def listener_callback(self, msg):
-        self.image_timestamps.append(time.time())
-
         # Converts the image to cv2 format
         bridge = CvBridge()
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
@@ -183,7 +183,8 @@ class droneNeuralController(DroneInterface):
             vels = self.model(self.imageTensor)[0].tolist()
 
         self.profiling.append(f"\nAngular inference = {time.time() - initTime}")
-
+        
+        # Gets the vels
         angular = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / REDUCTION
         lineal = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)
 
@@ -196,22 +197,36 @@ class droneNeuralController(DroneInterface):
 
             # Gets drone velocity's
             vels = self.get_vels()
-
+            
+            # Smooths linear vel with a low pass filter
             self.lastVels.append(vels[0])
             if len(self.lastVels) > LINEAL_ARRAY_LENGTH:
                 self.lastVels.pop(0)
             
+            self.lastAngular.append(vels[1])
+            if len(self.lastAngular) > ANGULAR_ARRAY_LENGTH:
+                self.lastAngular.pop(0)
+            
             linearVel = np.mean(self.lastVels)
-
-            self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (vels[0], vels[1]))
+            lastAngular = np.mean(self.lastAngular)
 
             # Set the velocity
-            self.set_vel2D(float(linearVel), 0, MAX_Z, float(vels[1]))
+            self.set_vel2D(float(linearVel), 0, MAX_Z, float(lastAngular))
 
             # Profiling
             self.vel_timestamps.append(time.time())
             self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
-    
+            
+            # Publish the info for training
+            velsPubMsg = Point()
+            velsPubMsg.x = float(vels[0]) # Raw lineal vel
+            velsPubMsg.y = float(linearVel) # Filtered lineal vel
+            velsPubMsg.z = vels[1] # Angular vel
+            self.velPublisher_.publish(velsPubMsg)
+
+            # Logger
+            self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (vels[0], vels[1]))
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -237,6 +252,7 @@ def main(args=None):
             drone.save_data()
             initTime = time.time()
 
+        drone.generalTimestamps.append(time.time())
 
         # Process a single iteration of the ROS event loop
         rclpy.spin_once(drone, timeout_sec=0.05)

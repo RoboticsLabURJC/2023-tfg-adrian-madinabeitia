@@ -33,7 +33,7 @@ BREAK_INCREMENT = 1.2
 
 # Vel control
 MAX_ANGULAR = 2.0
-MAX_LINEAR = 6.3
+MAX_LINEAR = 6.0
 MIN_LINEAR = 3.0
 MAX_Z = 2.0
 
@@ -86,7 +86,7 @@ class droneController(DroneInterface):
         self.linearVel = MAX_LINEAR
 
         # Frequency analysis 
-        self.image_timestamps = []
+        self.generalTimestamps = []
         self.vel_timestamps = []
         self.profiling = []
         self.lastVels = []
@@ -100,12 +100,11 @@ class droneController(DroneInterface):
 
 
     def save_data(self):
-        save_timestamps(self.profilingDir + '/sub_timestamps.npy', self.image_timestamps)
+        save_timestamps(self.profilingDir + '/general_timestamps.npy', self.generalTimestamps)
         save_timestamps(self.profilingDir + '/vel_timestamps.npy', self.vel_timestamps)
         save_profiling(self.profilingDir + '/profiling_data.txt', self.profiling)
 
     def listener_callback(self, msg):
-        self.image_timestamps.append(time.time())
 
         # Image conversion to cv2 format
         initTime = time.time()
@@ -257,10 +256,10 @@ class droneController(DroneInterface):
 
             # Gets drone velocity's
             angularVel = self.get_angular_vel(farthestPoint, nearestPoint)
-            linearVel = self.get_linear_vel(distancePoint)
+            linearVelRaw = self.get_linear_vel(distancePoint)
 
-            # Smooths linear vel with circular array
-            self.lastVels.append(linearVel)
+            # Smooths linear vel with a low pass filter
+            self.lastVels.append(linearVelRaw)
             if len(self.lastVels) > LINEAL_ARRAY_LENGTH:
                 self.lastVels.pop(0)
             
@@ -268,8 +267,8 @@ class droneController(DroneInterface):
             
             # Publish the info for training
             vels.x = float(linearVel)
-            vels.y = float(angularVel)
-            vels.z = MAX_Z
+            vels.y = float(linearVelRaw)
+            vels.z = float(angularVel)
             self.velPublisher_.publish(vels)
 
             # Set the velocity
@@ -303,6 +302,7 @@ def main(args=None):
             drone.save_data()
             initTime = time.time()
 
+        drone.generalTimestamps.append(time.time())
 
         # Process a single iteration of the ROS event loop
         rclpy.spin_once(drone, timeout_sec=VEL_PUBLISH_FREQ)
