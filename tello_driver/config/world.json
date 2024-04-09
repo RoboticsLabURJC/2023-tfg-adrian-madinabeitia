@@ -1,0 +1,15 @@
+{
+    "world": "../worlds/montmelo_line.world",
+    "drones": [
+        {
+            "model": "iris_dual_cam",
+            "name:": "drone0",
+            "pose": [
+                0.0,
+                0.0,
+                0.0,
+                3.14
+            ]
+        }
+    ]
+}

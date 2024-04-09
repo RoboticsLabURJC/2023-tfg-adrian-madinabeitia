@@ -17,8 +17,8 @@ def exit_process_function(_launch_context, route, ns):
     subprocess.run(["bash", route, ns], check=True)
 
 def generate_launch_description():
-    sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
-    utils_path = os.path.join(get_package_share_directory('drone_driver'), 'utils')
+    sim_config = os.path.join(get_package_share_directory('drone_sim_driver'), 'config')
+    utils_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'utils')
 
     world = DeclareLaunchArgument(
         'world',
@@ -61,16 +61,16 @@ def generate_launch_description():
 
     tmuxAttach = ExecuteProcess(
         # Aerostack2 terminal
-        # cmd=['gnome-terminal', '--', 'tmux', 'attach-session', '-t', namespace],
+        cmd=['gnome-terminal', '--', 'tmux', 'attach-session', '-t', namespace],
 
         # No additional window
-        cmd=['tmux', 'attach-session', '-t', namespace],
+        #cmd=['tmux', 'attach-session', '-t', namespace],
         name="attach",
     )
 
 
     parseYaml = Node(
-        package='drone_driver',
+        package='drone_sim_driver',
         executable='parseWorld.py',
         output='screen',
         arguments=[

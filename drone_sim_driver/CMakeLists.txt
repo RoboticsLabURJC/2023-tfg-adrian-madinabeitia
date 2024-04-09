@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(drone_driver)
+project(drone_sim_driver)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -38,23 +38,23 @@ install(
 )
 
 install(
-  PROGRAMS src/droneExpertPilot.py
+  PROGRAMS src/dataset/droneExpertPilot.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(
-  PROGRAMS src/droneNeuralPilot.py
+  PROGRAMS src/models/droneNeuralPilot.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 install(
-  PROGRAMS src/image_filter_node.py
+  PROGRAMS src/dataset/image_filter_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds config models utils include
+  DIRECTORY launch worlds config sim_assets utils include
   DESTINATION share/${PROJECT_NAME}
 )
 

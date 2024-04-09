@@ -13,7 +13,7 @@ env_vars = {
 def generate_launch_description():
 
     filterImage = Node(
-        package='drone_driver',
+        package='drone_sim_driver',
         executable='image_filter_node.py',
         arguments=[
             '--output_directory', LaunchConfiguration('out_dir'),
@@ -33,7 +33,7 @@ def generate_launch_description():
     )
 
     control = Node(
-        package='drone_driver',
+        package='drone_sim_driver',
         executable='droneExpertPilot.py',
         output='screen',
         arguments=[

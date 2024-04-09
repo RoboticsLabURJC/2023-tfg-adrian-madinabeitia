@@ -1,20 +1,32 @@
 # 2023-tfg-adrian-madinabeitia
 
+<div align="center">
+    <img width=100px src="https://img.shields.io/badge/lenguage-%20python-blue" alt="Python">
+    <img width=100px src="https://img.shields.io/badge/status-in%20process-orange" alt="In process">
+</div>
+
 ## Index
 
+- [2023-tfg-adrian-madinabeitia](#2023-tfg-adrian-madinabeitia)
+  - [Index](#index)
+  - [Folder distribution](#folder-distribution)
+  - [Manual](#manual)
+  - [Automation scripts](#automation-scripts)
+    - [Dataset generator](#dataset-generator)
+    - [Training script](#training-script)
+
 ---
 ---
 
-<!-- ## Installation
-Versions
-Ros Humble
-Gazebo 11.10.2 -->
+## Folder distribution
+We follow the following [repository distribution](https://medium.com/analytics-vidhya/folder-structure-for-machine-learning-projects-a7e451a8caaa) for machine learning projects, along with the basic ROS structure.
 
-<!-- Tmux installation -->
+The **drone_sim_driver** contains nodes and scripts related to the training and usage of the neural network for a simulated environment, while **tello_driver** contains the nodes for the DJI Tello drone.
 
-<!-- ---
---- -->
-## Manually
+---
+---
+
+## Manual
 
 1. For launch only the world
 

@@ -1,0 +1,8 @@
+# OS requirements:
+ubuntu -> 22.04
+
+# Middlewares requirements;
+ros2 ->humble
+Gazebo -> 11.10.2
+
+# Packages requirements:

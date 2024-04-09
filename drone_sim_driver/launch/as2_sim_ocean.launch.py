@@ -9,9 +9,9 @@ sim_time = "true"
 world = "/ocean.world"
 
 def generate_launch_description():
-    sim_config = os.path.join(get_package_share_directory('drone_driver'), 'config')
-    worlds_dir = os.path.join(get_package_share_directory('drone_driver'), 'worlds')
-    tmux_yml = os.path.join(get_package_share_directory('drone_driver'), 'config/tmuxLaunch.yml')
+    sim_config = os.path.join(get_package_share_directory('drone_sim_driver'), 'config')
+    worlds_dir = os.path.join(get_package_share_directory('drone_sim_driver'), 'worlds')
+    tmux_yml = os.path.join(get_package_share_directory('drone_sim_driver'), 'config/tmuxLaunch.yml')
 
     # Px4 autopilot gazebo launch
     gazeboPx4 = ExecuteProcess(
@@ -40,7 +40,7 @@ def generate_launch_description():
 
 
     parseYaml = Node(
-        package='drone_driver',
+        package='drone_sim_driver',
         executable='parseWorld.py',
         output='screen',
         arguments=[

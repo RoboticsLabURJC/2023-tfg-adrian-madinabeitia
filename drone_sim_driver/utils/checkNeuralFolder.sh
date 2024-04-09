@@ -34,10 +34,10 @@ for name in "${tar_files_no_extension[@]}"; do
     for world in "${test_worlds[@]}"; do
 
         # Executes the simulator
-        tmux send-keys -t 0 "ros2 launch drone_driver as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=0.0" C-m
+        tmux send-keys -t 0 "ros2 launch drone_sim_driver as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=0.0" C-m
         sleep 5
 
-        tmux send-keys -t 1 "ros2 launch drone_driver neuralPilot.launch.py trace:=False out_dir:=$output_directory/profiling/$world$iteration network_path:=$model_folder/${name}.tar | tee temp_output.txt" C-m
+        tmux send-keys -t 1 "ros2 launch drone_sim_driver neuralPilot.launch.py trace:=False out_dir:=$output_directory/profiling/$world$iteration network_path:=$model_folder/${name}.tar | tee temp_output.txt" C-m
 
         # Waits until the drone is flying
         while ! grep -q "Following" temp_output.txt; do

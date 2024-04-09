@@ -1,8 +1,7 @@
-src/drone_driver/test_dataset
-src/drone_driver/training_dataset
-src/drone_driver/prueba
-src/drone_driver/src/car
-src/drone_driver/profiling
-src/drone_driver/utils/*.tar
-src/drone_driver/src/plotFunctions/positionRecords
-src/drone_driver/networks
+drone_sim_driver/data
+drone_sim_driver/models
+drone_sim_driver/results
+
+tello_driver/data
+tello_driver/models
+tello_driver/results

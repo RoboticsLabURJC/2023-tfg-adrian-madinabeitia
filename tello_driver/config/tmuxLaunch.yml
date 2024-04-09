@@ -1,0 +1,73 @@
+<%
+# Input parameters
+drone_namespace     = @settings["drone_namespace"]
+simulation_time     = @settings["simulation_time"] == "false"
+config_path         = @settings["config_path"]
+
+
+
+
+# Other parameters
+behavior_type               = "position"
+
+motion_controller = "/motion_controller.yaml"
+motion_controller_plugin    = "pid_speed_controller" #.yaml
+estimator_plugin    = "raw_odometry"
+platform_config_file = "/platform_config.yaml"
+state_estimator_config_file = "/state_estimator_odom.yaml"
+
+%>
+attach: false
+root: ./
+windows:
+  - alphanumeric_viewer:
+      layout: tiled
+      panes:
+        - ros2 run as2_alphanumeric_viewer as2_alphanumeric_viewer_node
+            --ros-args -r  __ns:=/<%= drone_namespace %>
+
+  - platform:
+      layout: tiled
+      panes:
+        - ros2 launch as2_platform_tello tello_platform.launch.py
+
+  
+  - state_estimator:
+      layout:
+      panes:
+        - ros2 launch as2_state_estimator state_estimator_launch.py
+            namespace:=<%= drone_namespace %>
+            use_sim_time:=<%= simulation_time %>
+            plugin_name:=<%= estimator_plugin %>
+            plugin_config_file:=<%= config_path %>/<%= state_estimator_config_file %>
+ 
+  - controller:
+      layout:
+      panes:
+        - ros2 launch as2_motion_controller controller_launch.py
+            namespace:=<%= drone_namespace %>
+            use_sim_time:=<%= simulation_time %>
+            plugin_name:=<%= motion_controller_plugin %>
+            motion_controller_config_file:=<%= config_path %><%= motion_controller %>
+            plugin_config_file:=<%= config_path %>/<%= motion_controller_plugin %>.yaml        
+  
+  - behaviors:
+      layout:
+      panes:
+        - ros2 launch as2_behaviors_motion motion_behaviors_launch.py
+            namespace:=<%= drone_namespace %>
+            use_sim_time:=<%= simulation_time %>
+            follow_path_plugin_name:=follow_path_plugin_<%= behavior_type %>
+            go_to_plugin_name:=go_to_plugin_<%= behavior_type %>
+            takeoff_plugin_name:=takeoff_plugin_<%= behavior_type %>
+            land_plugin_name:=land_plugin_speed
+
+        <%- if behavior_type == "trajectory" %>
+        - ros2 launch as2_behaviors_trajectory_generation generate_polynomial_trajectory_behavior_launch.py
+            namespace:=<%= drone_namespace %>
+            use_sim_time:=<%= simulation_time %>
+        <%- end %>
+  - mission:
+      layout:
+      panes:
+        - 
