@@ -21,10 +21,10 @@ from geometry_msgs.msg import Point
 package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
 
-from include.control_functions import PID, save_timestamps, save_profiling
-from include.models import pilotNet
+from src.control_functions import PID, save_timestamps, save_profiling
+from models import pilotNet
 from drone_sim_driver.src.models.train import load_checkpoint
-from include.data import dataset_transforms, MAX_ANGULAR, MIN_LINEAR, MAX_LINEAR
+from src.dataset.data import dataset_transforms, MAX_ANGULAR, MIN_LINEAR, MAX_LINEAR
 
 # Vel control
 MAX_Z = 2

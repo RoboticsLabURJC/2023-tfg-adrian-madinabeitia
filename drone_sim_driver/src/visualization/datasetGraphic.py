@@ -7,7 +7,7 @@ from ament_index_python.packages import get_package_share_directory
 package_path = get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
 
-from include.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
+from src.dataset.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
 
 DATA_PATH = "../../training_dataset/expertPilot_V4"
 
