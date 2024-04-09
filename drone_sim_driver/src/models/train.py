@@ -20,8 +20,6 @@ from models import pilotNet
 
 writer = SummaryWriter()
 
-
-
 BATCH_SIZE = 100
 LEARNING_RATE=1e-4
 MOMENT=0.05
