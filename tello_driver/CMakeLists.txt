@@ -50,7 +50,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch config utils include
+  DIRECTORY launch config utils src
   DESTINATION share/${PROJECT_NAME}
 )
 

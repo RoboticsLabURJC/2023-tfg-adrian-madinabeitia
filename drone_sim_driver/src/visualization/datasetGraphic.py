@@ -9,7 +9,7 @@ sys.path.append(package_path)
 
 from src.dataset.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
 
-DATA_PATH = "../../training_dataset/expertPilot_V4"
+DATA_PATH = "../../data/outDir"
 
 def plot_3d_bars(ax, x, y, z, xlabel='X', ylabel='Y', zlabel='Z', title='3D Plot'):
 

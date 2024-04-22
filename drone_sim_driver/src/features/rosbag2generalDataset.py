@@ -52,10 +52,10 @@ class rosbagDataset(Dataset):
                         # Checks if it is the velocities topic
                         if connection.topic == vel_topic:
                             data = deserialize_cdr(rawData, connection.msgtype)
-                            angular = data.y
+                            angular = data.z
 
                             # Conversion global frame to local frame
-                            linear = data.x
+                            linear = data.y
 
                             # Checks the first timestamp
                             if self.firstVelTimestamp == -1:

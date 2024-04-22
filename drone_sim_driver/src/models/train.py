@@ -112,6 +112,7 @@ def main(filePath, datasetPath):
 
     # Loads if theres another model
     if should_resume():
+        print("Resumed last training")
         load_checkpoint(filePath, model, optimizer)
 
     # Set up cura
@@ -128,6 +129,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--network_path', type=str, default="../utils/net1")
     parser.add_argument('--dataset_path', type=str, default="../training_dataset/network")
+    # -r For resume the training of a trained model
 
     args = parser.parse_args()
     main(args.network_path, args.dataset_path)

@@ -8,18 +8,14 @@ from as2_msgs.msg._platform_status import PlatformStatus
 from ds4_driver_msgs.msg._status import Status
 from as2_python_api.modules.motion_reference_handler_module import MotionReferenceHandlerModule
 from sensor_msgs.msg import Image
-from cv_bridge import CvBridge
 from geometry_msgs.msg import Point
-from rclpy.qos import QoSProfile, QoSPresetProfiles
 import sys
 import numpy as np
 import signal
 import os
 from rclpy.serialization import serialize_message
-from std_msgs.msg import String
 import argparse
 import rosbag2_py
-import threading
 
 from tf2_msgs.msg import TFMessage
 
@@ -35,7 +31,7 @@ from src.control_functions import PID, save_timestamps, save_profiling
 LINEAL_ARRAY_LENGTH = 150
 
 # Frequency's 
-VEL_PUBLISH_FREQ = 0.05
+VEL_PUBLISH_FREQ = 0.2
 SAVE_FREQ = 5
 
 
@@ -106,6 +102,7 @@ class droneController(DroneInterface):
 
         self.takeOff = False
         self.landBool = False
+        self.constZ = False
 
 
     def open_bag(self):
@@ -113,10 +110,14 @@ class droneController(DroneInterface):
         self.writer = rosbag2_py.SequentialWriter()
         self.converter_options = rosbag2_py._storage.ConverterOptions('', '')
 
+        # Ensures that is a new directory
+        while os.path.exists(self.profilingDir + '/rosbag' + str(self.recordId)):
+            self.recordId += 1
+
         storage_options = rosbag2_py._storage.StorageOptions(
-            uri=self.profilingDir + '/rosbag',
+            uri=self.profilingDir + '/rosbag' + str(self.recordId),
             storage_id='sqlite3')
-            
+        
         self.writer.open(storage_options, self.converter_options)
 
         # Saves the desired topics
@@ -141,6 +142,7 @@ class droneController(DroneInterface):
         self.writer.create_topic(vel_topic_info)
         self.writer.create_topic(image_topic_info)
         self.writer.create_topic(tf_topic_info) 
+        self.recordId += 1
 
     def image_callback(self, msg):
         ## Saves the topic if desired
@@ -252,7 +254,7 @@ class droneController(DroneInterface):
     
     def velocity_control(self, msg):
         # Z axis position control
-        if abs(msg.axis_right_y) > 0.5 and (time.time() - self.lastCommanded) > self.joystickPeriod:
+        if abs(msg.axis_right_y) > 0.5 and (time.time() - self.lastCommanded) > self.joystickPeriod and not self.constZ:
             # Sets the correct sign
             self.posZ += 0.1 * abs(msg.axis_right_y) / msg.axis_right_y
 
@@ -318,17 +320,29 @@ class droneController(DroneInterface):
         
         # Recording buttons
         if (msg.button_square == 1 and not self.recordRosbag):
-            if self.firstRecord:
-                self.open_bag()
-                self.firstRecord = False
 
-            self.get_logger().info("Recording...")
+            self.open_bag()
+            self.get_logger().info("Recording in rosbag%d..." % self.recordId)
             self.recordRosbag = True
         
         if (msg.button_circle == 1 and self.recordRosbag):
             self.get_logger().info("Recording stooped...")
             self.recordRosbag = False
 
+            # The garbage collector ends the bag
+            self.writer = None
+        
+        if (msg.button_triangle == 1 and  time.time() - self.lastCommanded > self.buttonPeriod):
+            if self.constZ:
+                self.constZ = False
+                self.get_logger().info("Z axis movement active")
+            
+            else:
+                self.constZ = True
+                self.get_logger().info("Z axis movement blocked")
+            
+            self.lastCommanded = time.time()
+                
 
     def remote_control(self):
         vels = Point()
@@ -370,7 +384,7 @@ def goal():
     time.sleep(5)
     print("Aaaaaaaa")
 
-def sigint_handler(signum, frame, drone):
+def sigint_handler(signum, drone):
     # Lands the drone and clean all 
     drone.land_process()
     drone.destroy_node()
@@ -401,6 +415,7 @@ def main(args=None):
     drone.take_off_process()
     
     initTime = time.time()
+    itTime = time.time()
     # Start the flight
     while rclpy.ok() and not drone.landBool:
         try:
@@ -420,7 +435,7 @@ def main(args=None):
             drone.get_logger().info(str(e))
             drone.landBool = True
     
-    sigint_handler(signal.SIGINT, None, drone)
+    sigint_handler(signal.SIGINT, drone)
     
     exit()
 

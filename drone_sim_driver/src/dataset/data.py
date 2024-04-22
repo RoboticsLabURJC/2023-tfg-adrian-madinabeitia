@@ -20,8 +20,14 @@ MAX_LINEAR = 6.3
 MIN_LINEAR = 3.0
 
 # Labels
-ANGULAR_UMBRALS = [-0.5, -0.2, 0, 0.2, 0.5, float('inf')]  # label < umbral
-LINEAR_UMBRALS = [4.5, 5.5, float('inf')]
+
+# Follow line
+# ANGULAR_UMBRALS = [-0.5, -0.2, 0, 0.2, 0.5, float('inf')]  # label < umbral
+# LINEAR_UMBRALS = [4.5, 5.5, float('inf')]
+
+# Gates
+ANGULAR_UMBRALS = [-0.7, -0.2, 0, 0.2, 0.7, float('inf')]  # label < umbral
+LINEAR_UMBRALS = [3.0, 4.25, float('inf')]
 
 # General aspects
 USE_WEIGHTS = True
@@ -202,21 +208,20 @@ class rosbagDataset(Dataset):
     
     def balancedDataset(self):
         useWeights = USE_WEIGHTS
-        # #   <       5     5.5   inf       Weights 1
-        # weights = [(0.99, 0.3, 0.2),     # < -0.6
-        #            (0.80, 0.8, 0.4),     # < -0.3
-        #            (0.60, 0.7, 0.99),    # < 0
-        #            (0.60, 0.7, 0.99),    # < 0.3
-        #            (0.80, 0.8, 0.4),     # < 0.6
-        #            (0.99, 0.3, 0.2)]      # < inf
+        #   <       5     5.5   inf       Weights 1
+        # weights = [(0.85, 0.15, 0.25),     # < -0.6
+        #            (0.65, 0.55, 0.45),     # < -0.3
+        #            (0.35, 0.75, 0.995),    # < 0
+        #            (0.35, 0.75, 0.995),    # < 0.3
+        #            (0.65, 0.55, 0.45),     # < 0.6
+        #            (0.85, 0.15, 0.25)]      # < inf
 
-        weights = [(0.85, 0.15, 0.25),     # < -0.6
+        weights = [(0.2, 0.15, 0.0),     # < -0.6
                    (0.65, 0.55, 0.45),     # < -0.3
                    (0.35, 0.75, 0.995),    # < 0
                    (0.35, 0.75, 0.995),    # < 0.3
                    (0.65, 0.55, 0.45),     # < 0.6
-                   (0.85, 0.15, 0.25)]      # < inf
-
+                   (0.2, 0.15, 0.0)]      # < inf
         # Gets all the subsets
         labeledDataset = [self.getAngularSubset(self.dataset, float('-inf'), ANGULAR_UMBRALS[0])]
         

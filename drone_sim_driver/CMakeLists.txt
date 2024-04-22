@@ -54,7 +54,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds config sim_assets utils include
+  DIRECTORY launch worlds config sim_assets utils src
   DESTINATION share/${PROJECT_NAME}
 )
 
