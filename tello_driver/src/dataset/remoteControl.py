@@ -3,6 +3,7 @@
 import time
 import math
 import rclpy
+import shutil
 from as2_python_api.drone_interface import DroneInterface
 from as2_msgs.msg._platform_status import PlatformStatus
 from ds4_driver_msgs.msg._status import Status
@@ -103,6 +104,7 @@ class droneController(DroneInterface):
         self.takeOff = False
         self.landBool = False
         self.constZ = False
+        self.lastFile = ''
 
 
     def open_bag(self):
@@ -110,12 +112,13 @@ class droneController(DroneInterface):
         self.writer = rosbag2_py.SequentialWriter()
         self.converter_options = rosbag2_py._storage.ConverterOptions('', '')
 
+        filePath = self.profilingDir + '/rosbag' + str(self.recordId)
         # Ensures that is a new directory
-        while os.path.exists(self.profilingDir + '/rosbag' + str(self.recordId)):
+        while os.path.exists(filePath):
             self.recordId += 1
 
         storage_options = rosbag2_py._storage.StorageOptions(
-            uri=self.profilingDir + '/rosbag' + str(self.recordId),
+            uri=filePath,
             storage_id='sqlite3')
         
         self.writer.open(storage_options, self.converter_options)
@@ -143,6 +146,8 @@ class droneController(DroneInterface):
         self.writer.create_topic(image_topic_info)
         self.writer.create_topic(tf_topic_info) 
         self.recordId += 1
+
+        return filePath
 
     def image_callback(self, msg):
         ## Saves the topic if desired
@@ -319,20 +324,28 @@ class droneController(DroneInterface):
         self.cross_control(msg)
         
         # Recording buttons
-        if (msg.button_square == 1 and not self.recordRosbag):
+        if msg.button_square == 1 and time.time() - self.lastCommanded > self.buttonPeriod:
 
-            self.open_bag()
-            self.get_logger().info("Recording in rosbag%d..." % self.recordId)
-            self.recordRosbag = True
-        
-        if (msg.button_circle == 1 and self.recordRosbag):
-            self.get_logger().info("Recording stooped...")
-            self.recordRosbag = False
+            if not self.recordRosbag:
+                self.lastFile = self.open_bag()
+                self.get_logger().info("Recording in rosbag%d..." % self.recordId)
+                self.recordRosbag = True
+            
+            else: 
+                self.get_logger().info("Recording stooped...")
+                self.recordRosbag = False
 
-            # The garbage collector ends the bag
-            self.writer = None
+                # The garbage collector ends the bag
+                self.writer = None
+
+            self.lastCommanded = time.time()
+
+        if (msg.button_circle == 1 and not self.recordRosbag):
+            if os.path.exists(self.lastFile):
+                shutil.rmtree(self.lastFile)
+                self.recordId -= 1
         
-        if (msg.button_triangle == 1 and  time.time() - self.lastCommanded > self.buttonPeriod):
+        if (msg.button_triangle == 1 and time.time() - self.lastCommanded > self.buttonPeriod):
             if self.constZ:
                 self.constZ = False
                 self.get_logger().info("Z axis movement active")

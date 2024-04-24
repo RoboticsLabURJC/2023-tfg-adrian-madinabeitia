@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import random
 import torchvision.transforms as transforms
 import albumentations as A
-from albumentations.pytorch import ToTensorV2
 from torchvision import transforms
 import numpy as np
 import random
