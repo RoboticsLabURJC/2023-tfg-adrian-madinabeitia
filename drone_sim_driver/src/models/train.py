@@ -16,7 +16,7 @@ package_path = ament_index_python.get_package_share_directory("drone_sim_driver"
 sys.path.append(package_path)
 
 from src.dataset.data import rosbagDataset, dataset_transforms
-from models import pilotNet
+from src.models.models import pilotNet
 
 writer = SummaryWriter()
 

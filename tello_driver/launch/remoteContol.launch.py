@@ -22,16 +22,23 @@ def generate_launch_description():
         default_value="./outDir"
     )
 
+    net_dir = DeclareLaunchArgument(
+        'net_dir',
+        default_value="../../drone_sim_driver/models/netGates.tar"
+    )
+
     control = Node(
         package='tello_driver',
         executable='remoteControl.py',
         output='screen',
         arguments=[
             '--output_directory', LaunchConfiguration('out_dir'),
+            '--network_directory', LaunchConfiguration('net_dir')
         ]
     )
 
     return LaunchDescription([
+        net_dir,
         out_dir,
         controller,
         control,

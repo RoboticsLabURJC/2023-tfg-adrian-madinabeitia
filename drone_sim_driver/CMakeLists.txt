@@ -52,6 +52,11 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(
+  PROGRAMS src/dataset/get_gates_vel.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ## Install world and launch files
 install(
   DIRECTORY launch worlds config sim_assets utils src
