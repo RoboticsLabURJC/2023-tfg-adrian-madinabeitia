@@ -420,7 +420,7 @@ class droneController(DroneInterface):
                 vels = self.model(self.imageTensor)[0].tolist()
 
                 # Gets the vels
-                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / 2
+                angularVel = (((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / 2) * 6
                 linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) / 4
                 self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
 

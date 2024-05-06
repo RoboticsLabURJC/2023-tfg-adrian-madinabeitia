@@ -14,9 +14,9 @@ import os
 from PIL import Image
 
 # General velocity's
-MAX_ANGULAR = 2.0
-MAX_LINEAR = 6.3
-MIN_LINEAR = 3.0
+MAX_ANGULAR = 1.5
+MAX_LINEAR = 6.0
+MIN_LINEAR = 1.0
 
 # Labels
 
@@ -24,13 +24,17 @@ MIN_LINEAR = 3.0
 # ANGULAR_UMBRALS = [-0.5, -0.2, 0, 0.2, 0.5, float('inf')]  # label < umbral
 # LINEAR_UMBRALS = [4.5, 5.5, float('inf')]
 
-# Gates
-ANGULAR_UMBRALS = [-0.7, -0.2, 0, 0.2, 0.7, float('inf')]  # label < umbral
-LINEAR_UMBRALS = [3.0, 4.25, float('inf')]
+# Gates (human pilot)
+# ANGULAR_UMBRALS = [-0.7, -0.2, 0, 0.2, 0.7, float('inf')]
+# LINEAR_UMBRALS = [3.0, 4.25, float('inf')]
+
+# Gates expert pilot
+ANGULAR_UMBRALS = [-0.45, -0.15, 0, 0.15, 0.45, float('inf')]
+LINEAR_UMBRALS = [2.0, 3.25, float('inf')]
 
 # General aspects
 USE_WEIGHTS = True
-USE_AUGMENTATION = False
+USE_AUGMENTATION = True
 
 def get_image_dataset(folder_path):
     images = []
@@ -95,11 +99,14 @@ class rosbagDataset(Dataset):
     def __init__(self, main_dir, transform, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
         self.main_dir = main_dir
         self.transform = transform
-        self.minSamples = 10
+        self.minSamples = 2
         self.dataAugment = dataAugment
         
-        self.imgData = get_image_dataset(main_dir + "/frontal_images")
-        self.velData = get_vels(main_dir + "/labels")
+        self.imgData = []
+        self.velData = []
+        for dir in main_dir:
+            self.imgData.extend(get_image_dataset(dir + "/frontal_images"))
+            self.velData.extend(get_vels(dir + "/labels"))
 
         self.dataset =  self.get_dataset() 
         self.applyAug = boolAug
@@ -157,17 +164,12 @@ class rosbagDataset(Dataset):
             velTensor = torch.tensor((velocityValue[0], -velocityValue[1])).to(device)
 
         # Horizontal movement
-        elif randNum == 20:                  # 1 / 8 chance
+        elif randNum == 20 or randNum == 10:                  # 1 / 8 chance
             randMove = random.randint(-mov, mov)
             imageTensor = F.affine(imageTensor, angle=0, translate=(randNum, 0), scale=1, shear=0)
-            velTensor = torch.tensor((velocityValue[0], velocityValue[1] + randMove/(mov*2))).to(device)
+            velTensor = torch.tensor((velocityValue[0], velocityValue[1] + randMove/(mov*4))).to(device)
 
-        # Vertical movement
-        elif randNum == 10:                  # 1 / 8 chance
-            randMove = random.randint(-mov, mov)
-            imageTensor = F.affine(imageTensor, angle=0, translate=(0, randMove), scale=1, shear=0)
-            velTensor = torch.tensor((velocityValue[0] - randMove/(mov*1.5), velocityValue[1])).to(device)
-        
+
         else:   # No changes                # 4 / 8 chance
             velTensor = torch.tensor(velocityValue).to(device)
 
@@ -215,12 +217,23 @@ class rosbagDataset(Dataset):
         #            (0.65, 0.55, 0.45),     # < 0.6
         #            (0.85, 0.15, 0.25)]      # < inf
 
-        weights = [(0.2, 0.15, 0.0),     # < -0.6
-                   (0.65, 0.55, 0.45),     # < -0.3
-                   (0.35, 0.75, 0.995),    # < 0
-                   (0.35, 0.75, 0.995),    # < 0.3
-                   (0.65, 0.55, 0.45),     # < 0.6
-                   (0.2, 0.15, 0.0)]      # < inf
+        # Gates => Remote pilot
+        # weights = [(0.2, 0.1, 0.0),
+        #         (0.55, 0.65, 0.25), 
+        #         (0.95, 0.95, 0.75), 
+        #         (0.95, 0.95, 0.75), 
+        #         (0.55, 0.65, 0.25),  
+        #         (0.2, 0.1, 0.0)] 
+
+        # Combined dataset
+        weights = [(0.1, 0.2, 0.3),     # < -0.6
+                   (0.55, 0.75, 0.45),     # < -0.3
+                   (0.95, 0.85, 0.75),    # < 0
+                   (0.95, 0.85, 0.75),    # < 0.3
+                   (0.55, 0.65, 0.45),     # < 0.6
+                   (0.1, 0.2, 0.3)]      # < inf
+        
+
         # Gets all the subsets
         labeledDataset = [self.getAngularSubset(self.dataset, float('-inf'), ANGULAR_UMBRALS[0])]
         

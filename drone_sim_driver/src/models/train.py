@@ -47,12 +47,12 @@ def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None):
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
 
-def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimizer):
+def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimizer):
 
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
-    dataset = rosbagDataset(datasetPath, dataset_transforms)
+    dataset = rosbagDataset(rosbagList, dataset_transforms)
     dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -105,7 +105,7 @@ def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimiz
     print('Training terminated. Consecutive epochs with average loss <= ', targetLoss)
 
 
-def main(filePath, datasetPath):
+def main(filePath, rosbagList):
 
     model = pilotNet()
     optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=MOMENT)
@@ -120,16 +120,21 @@ def main(filePath, datasetPath):
     model.to(device)
 
     model.train(True)
-    train(filePath, datasetPath,
+    train(filePath, rosbagList,
         model, optimizer)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')
 
-    parser.add_argument('--network_path', type=str, default="../utils/net1")
-    parser.add_argument('--dataset_path', type=str, default="../training_dataset/network")
+    parser.add_argument('--network_path', type=str, required=True)
+    parser.add_argument('--dataset_path', type=str, required=True)
+    parser.add_argument('--dataset_path2', type=str, default=None)
     # -r For resume the training of a trained model
 
     args = parser.parse_args()
-    main(args.network_path, args.dataset_path)
+    rosbagList = [args.dataset_path]
+    if args.dataset_path2 is not None:
+        rosbagList.append(args.dataset_path2)
+
+    main(args.network_path, rosbagList)

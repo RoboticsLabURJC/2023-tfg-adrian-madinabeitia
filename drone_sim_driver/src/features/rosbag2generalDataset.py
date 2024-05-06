@@ -36,6 +36,7 @@ class rosbagDataset(Dataset):
             os.makedirs(img_folder_path, exist_ok=True)
             os.makedirs(labels_folder_path, exist_ok=True)
 
+            print("Folder", rosbag_dir , "as", str(folderNum))
 
             try:
                 with ROS2Reader(rosbag_dir) as ros2_reader:
@@ -43,7 +44,15 @@ class rosbagDataset(Dataset):
                     channels = 3  # Encoding = bgr8
                     ros2_conns = [x for x in ros2_reader.connections]
                     ros2_messages = ros2_reader.messages(connections=ros2_conns)
+                    n_vel = 0
+                    n_img = 0
+                    self.firstVelTimestamp = -1
+                    self.firstImgTimestamp = -1
 
+                    self.lastVelTimestamp = 0
+                    self.associatedImage = False
+                    self.lastImgTimestamp = 0
+                    self.associatedVel = True
 
                     # Generates all the measures of the topic
                     for m, msg in enumerate(ros2_messages):
@@ -55,7 +64,7 @@ class rosbagDataset(Dataset):
                             angular = data.z
 
                             # Conversion global frame to local frame
-                            linear = data.y
+                            linear = data.x
 
                             # Checks the first timestamp
                             if self.firstVelTimestamp == -1:
@@ -63,7 +72,8 @@ class rosbagDataset(Dataset):
 
                             if timestamp >= self.lastVelTimestamp and not self.associatedVel:
                                 # Save the data into a .txt
-                                output_path = os.path.join(labels_folder_path, f"{folderNum}_{m}.txt")
+                                output_path = os.path.join(labels_folder_path, f"{folderNum}_{n_vel}.txt")
+                                n_vel += 1
                                 with open(output_path, "w") as txt_file:
                                     txt_file.write(f"{linear}, {angular}\n")
                                 self.associatedImage = False
@@ -74,6 +84,7 @@ class rosbagDataset(Dataset):
 
                         # Checks if it is the image topic
                         if connection.topic == img_topic:
+                            
                             data = deserialize_cdr(rawData, connection.msgtype)
 
                             # Converts the image into a readable format
@@ -86,7 +97,8 @@ class rosbagDataset(Dataset):
 
                             if timestamp >= self.lastImgTimestamp and not self.associatedImage:
                                 # Save the data into a .jpg
-                                output_path = os.path.join(img_folder_path, f"{folderNum}_{m}.jpg")
+                                output_path = os.path.join(img_folder_path, f"{folderNum}_{n_img}.jpg")
+                                n_img += 1
                                 resized = cv2.resize(cvImage, (160, 120))
                                 cv2.imwrite(output_path, cv2.cvtColor(resized, cv2.COLOR_BGR2RGB))
                                 
@@ -113,8 +125,10 @@ def main():
     # Instantiate rosbagDataset with the provided path
     dataset = rosbagDataset(args.rosbags_path)
 
-    img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
-    vel_topic = "/drone0/commanded_vels"
+    # img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
+    # vel_topic = "/drone0/commanded_vels"    
+    img_topic = "/cf0/sensor_measurements/hd_camera/image_raw"
+    vel_topic = "commanded_vels"
 
     dataset.transform_data(img_topic, vel_topic)
 

@@ -24,7 +24,7 @@ def generate_launch_description():
 
     net_dir = DeclareLaunchArgument(
         'net_dir',
-        default_value="../../drone_sim_driver/models/netGates.tar"
+        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/gatesCombined/net1-16.tar"
     )
 
     control = Node(

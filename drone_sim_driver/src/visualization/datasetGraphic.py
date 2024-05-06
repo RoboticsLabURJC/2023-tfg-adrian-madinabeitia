@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 from ament_index_python.packages import get_package_share_directory
+import argparse
 
 package_path = get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
@@ -121,10 +122,18 @@ def graphData(titles, vels):
     plt.show()
 
 def main():
-    
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='Process ROS bag data')
+    parser.add_argument('--rosbags_path', type=str, help='Path to first set of ROS bags', default=DATA_PATH)
+    parser.add_argument('--rosbags_path2', type=str, help='Path to second set of ROS bags', default=None)
+    args = parser.parse_args()    
+
+    rosbagList = [args.rosbags_path]
+    if args.rosbags_path2 is not None:
+        rosbagList.append(args.rosbags_path2)
 
     # Gets the raw dataset
-    data1= rosbagDataset(DATA_PATH, dataset_transforms, False, 1)
+    data1= rosbagDataset(rosbagList, dataset_transforms, False, 1)
     rawVels = [velocities for image, velocities in data1.dataset]
 
     # Gets the balanced dataset
