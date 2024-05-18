@@ -34,15 +34,15 @@ from src.dataset.data import dataset_transforms
 
 
 # Low pass filter
-LINEAL_ARRAY_LENGTH = 300
+LINEAL_ARRAY_LENGTH = 150
 
 # Frequency's 
-VEL_PUBLISH_FREQ = 0.2
+VEL_PUBLISH_FREQ = 0.05
 SAVE_FREQ = 5
 
 MAX_ANGULAR = 1.5
-MAX_LINEAR = 4.5
-MIN_LINEAR = 0
+MAX_LINEAR = 5.0
+MIN_LINEAR = 0.0
 
 class droneController(DroneInterface):
 
@@ -263,7 +263,7 @@ class droneController(DroneInterface):
         initTime = time.time()
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
-        self.profiling.append(f"\nMotion_ref_handler = {time.time() - initTime}")
+        
         
     def set_vel(self, vx, vy, vz, yaw):
         # Gets the drone velocity's
@@ -420,8 +420,8 @@ class droneController(DroneInterface):
                 vels = self.model(self.imageTensor)[0].tolist()
 
                 # Gets the vels
-                angularVel = (((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / 2) * 6
-                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) / 4
+                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / 3.5
+                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) / 2
                 self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
 
         return angularVel, linearVelRaw, lateralVel       
@@ -460,6 +460,8 @@ class droneController(DroneInterface):
 
             self.vel_timestamps.append(time.time())
             self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
+
+            self.profiling.append(f"\nMotion_ref_handler = {time.time() - initTime}")
     
 def goal():
     time.sleep(5)

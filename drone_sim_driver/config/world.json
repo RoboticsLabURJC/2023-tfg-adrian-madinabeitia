@@ -1,5 +1,5 @@
 {
-    "world": "../worlds/ocean.world",
+    "world": "../worlds/nurburgring_line.world",
     "drones": [
         {
             "model": "iris_dual_cam",

@@ -23,7 +23,7 @@ sys.path.append(package_path)
 
 from src.control_functions import PID, save_timestamps, save_profiling
 from src.models.models import pilotNet
-from drone_sim_driver.src.models.train import load_checkpoint
+from src.models.train import load_checkpoint
 from src.dataset.data import dataset_transforms, MAX_ANGULAR, MIN_LINEAR, MAX_LINEAR
 
 # Vel control
@@ -184,7 +184,7 @@ class droneNeuralController(DroneInterface):
         
         # Gets the vels
         angular = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / REDUCTION
-        lineal = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)
+        lineal = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) / 2
 
         return (lineal, angular)
 
@@ -201,12 +201,13 @@ class droneNeuralController(DroneInterface):
             if len(self.lastVels) > LINEAL_ARRAY_LENGTH:
                 self.lastVels.pop(0)
             
-            self.lastAngular.append(vels[1])
-            if len(self.lastAngular) > ANGULAR_ARRAY_LENGTH:
-                self.lastAngular.pop(0)
+            # self.lastAngular.append(vels[1])
+            # if len(self.lastAngular) > ANGULAR_ARRAY_LENGTH:
+            #     self.lastAngular.pop(0)
             
             linearVel = np.mean(self.lastVels)
-            lastAngular = np.mean(self.lastAngular)
+            #lastAngular = np.mean(self.lastAngular)
+            lastAngular = vels[1]
 
             # Set the velocity
             self.set_vel2D(float(linearVel), 0, MAX_Z, float(lastAngular))

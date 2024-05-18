@@ -15,8 +15,8 @@ from PIL import Image
 
 # General velocity's
 MAX_ANGULAR = 1.5
-MAX_LINEAR = 6.0
-MIN_LINEAR = 1.0
+MAX_LINEAR = 5.0
+MIN_LINEAR = 0.0
 
 # Labels
 
@@ -34,7 +34,7 @@ LINEAR_UMBRALS = [2.0, 3.25, float('inf')]
 
 # General aspects
 USE_WEIGHTS = True
-USE_AUGMENTATION = True
+USE_AUGMENTATION = False
 
 def get_image_dataset(folder_path):
     images = []
@@ -86,7 +86,7 @@ def get_vels(folder_path):
                 content = file.read()
                 numbers = [float(num) for num in content.split(',')]
         
-                vels.append([numbers[0], numbers[1]*3])
+                vels.append([abs(numbers[0]), numbers[1]*3])
 
     except FileNotFoundError:
         print("Error: File not found.")
