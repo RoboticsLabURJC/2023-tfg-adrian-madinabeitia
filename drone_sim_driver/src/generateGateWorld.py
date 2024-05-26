@@ -1,5 +1,7 @@
 import math
 
+EXTRA_ROTATION = math.pi
+
 def add_circle(center_x, center_y, radius, num_gates, rad_ang):
   positions = []
 
@@ -17,7 +19,7 @@ def add_circle(center_x, center_y, radius, num_gates, rad_ang):
       orientation = angle - math.pi / 2 
 
       # Append the position and orientation to the list
-      positions.append((x, y, 0, 0, 0, orientation))
+      positions.append((x, y, 0, 0, 0, orientation + EXTRA_ROTATION))
   
   return positions
 
@@ -36,7 +38,7 @@ def add_line(center_x, center_y, length, num_gates, orientation):
         y = center_y + i * step * math.sin(angle_increment)
 
         # Append the position and orientation to the list
-        positions.append((x, y, 0, 0, 0, orientation))
+        positions.append((x, y, 0, 0, 0, orientation + EXTRA_ROTATION))
 
     return positions
      

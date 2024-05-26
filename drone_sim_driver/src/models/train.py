@@ -3,7 +3,6 @@
 from torch.utils.tensorboard import SummaryWriter
 from torch import nn
 import torch
-from torch.serialization import save
 from torch.utils.data import DataLoader
 import argparse
 import torch.optim as optim
@@ -21,15 +20,15 @@ from src.models.models import pilotNet
 writer = SummaryWriter()
 
 BATCH_SIZE = 100
-LEARNING_RATE=1e-4
-MOMENT=0.05
+LEARNING_RATE = 1e-5
+MOMENT = 0.05
 
-TARGET_LOSS = 0.005#0.05
+TARGET_LOSS = 0.005
 TARGET_CONSECUTIVE_LOSS = 4
 
 def should_resume():
-    return "--resume" in sys.argv or "-r" in sys.argv
-
+    # return "--resume" in sys.argv or "-r" in sys.argv
+    return True
 
 def save_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer):
     torch.save({
@@ -37,17 +36,15 @@ def save_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer):
         'optimizer_state_dict': optimizer.state_dict(),
     }, path)
 
-
-def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None):
-    checkpoint = torch.load(path)
-
+def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None, device: torch.device = torch.device("cpu")):
+    checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
+    model.to(device)
 
-    if optimizer != None:
+    if optimizer is not None and "optimizer_state_dict" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-
-def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimizer):
+def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimizer, device: torch.device):
 
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
@@ -70,6 +67,9 @@ def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimize
 
             # get the inputs; data is a list of [inputs, labels]
             label, image = data
+
+            # Move data to the same device as the model
+            image, label = image.to(device), label.to(device)
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -104,25 +104,19 @@ def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimize
 
     print('Training terminated. Consecutive epochs with average loss <= ', targetLoss)
 
-
 def main(filePath, rosbagList):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    model = pilotNet()
+    model = pilotNet().to(device)
     optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=MOMENT)
 
     # Loads if theres another model
     if should_resume():
         print("Resumed last training")
-        load_checkpoint(filePath, model, optimizer)
-
-    # Set up cura
-    device = torch.device("cuda:0")
-    model.to(device)
+        load_checkpoint(filePath, model, optimizer, device)
 
     model.train(True)
-    train(filePath, rosbagList,
-        model, optimizer)
-
+    train(filePath, rosbagList, model, optimizer, device)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')

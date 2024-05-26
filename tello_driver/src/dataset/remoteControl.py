@@ -44,6 +44,11 @@ MAX_ANGULAR = 1.5
 MAX_LINEAR = 5.0
 MIN_LINEAR = 0.0
 
+# Best P values
+pAngular = 0.3
+pLineal = 0.8 
+
+
 class droneController(DroneInterface):
 
     def __init__(self, drone_id: str = "drone0", verbose: bool = False, 
@@ -75,9 +80,9 @@ class droneController(DroneInterface):
 
         # Limits
         self.max_angular = 3
-        self.min_angular = 0.5
+        self.min_angular = 0.0
         self.max_linear = 12.0
-        self.min_linear = 1
+        self.min_linear = 0.0
         self.max_z = 4.0
         self.min_z = 0.5
 
@@ -91,8 +96,8 @@ class droneController(DroneInterface):
         self.lastCommanded = actualTime
 
         # Defaults
-        self.angular_limit = self.max_angular / 2
-        self.linear_limit = self.max_linear / 2
+        self.angular_limit = 1#self.max_angular / 2
+        self.linear_limit = 1#self.max_linear / 2
         self.posZ = 2.0
         
         # Frequency analysis 
@@ -307,8 +312,10 @@ class droneController(DroneInterface):
             self.lastCommanded = time.time()
         
         # Linear vel control
+        increment = 0.1
+
         if msg.button_l2 == 1 and (time.time() - self.lastL2) > self.buttonPeriod:
-            self.linear_limit -= 0.5
+            self.linear_limit -= increment
 
             if self.linear_limit < self.min_linear:
                 self.linear_limit = self.min_linear
@@ -317,7 +324,7 @@ class droneController(DroneInterface):
             self.get_logger().info("Max linear vel = %f" % self.linear_limit)
         
         if msg.button_r2 == 1 and (time.time() - self.lastR2) > self.buttonPeriod:
-            self.linear_limit += 0.5
+            self.linear_limit += increment
 
             if self.linear_limit > self.max_linear:
                 self.linear_limit = self.max_linear
@@ -327,7 +334,7 @@ class droneController(DroneInterface):
         
         # Angular control
         if msg.button_l1 == 1 and (time.time() - self.lastL1) > self.buttonPeriod:
-            self.angular_limit -= 0.5
+            self.angular_limit -= increment
 
             if self.angular_limit < self.min_angular:
                 self.angular_limit = self.min_angular
@@ -336,7 +343,7 @@ class droneController(DroneInterface):
             self.get_logger().info("Max angular vel = %f" % self.angular_limit)
         
         if msg.button_r1 == 1 and (time.time() - self.lastR1) > self.buttonPeriod:
-            self.angular_limit += 0.5
+            self.angular_limit += increment
 
             if self.angular_limit > self.max_angular:
                 self.angular_limit = self.max_angular
@@ -379,6 +386,7 @@ class droneController(DroneInterface):
         if (msg.button_circle == 1 and not self.recordRosbag):
             if os.path.exists(self.lastFile):
                 shutil.rmtree(self.lastFile)
+                self.get_logger().info("Deleted file %s" % self.lastFile)
                 self.recordId -= 1
         
         # With triangle locks the altitude
@@ -411,8 +419,8 @@ class droneController(DroneInterface):
         lateralVel = 0
 
         if not self.neuralControl:
-            angularVel =  self.leftY * self.angular_limit
-            linearVelRaw = self.leftX * self.linear_limit
+            angularVel =  self.leftY * self.angular_limit * 2
+            linearVelRaw = self.leftX * self.linear_limit * 3
             lateralVel = self.rightY * self.linear_limit / 1.5     
 
         else: 
@@ -420,8 +428,8 @@ class droneController(DroneInterface):
                 vels = self.model(self.imageTensor)[0].tolist()
 
                 # Gets the vels
-                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) / 3.5
-                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) / 2
+                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) * self.angular_limit
+                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) * self.linear_limit
                 self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
 
         return angularVel, linearVelRaw, lateralVel       
