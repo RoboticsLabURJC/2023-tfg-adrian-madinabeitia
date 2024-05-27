@@ -124,6 +124,8 @@ class droneController(DroneInterface):
 
         useNeuralNetwork = True
         self.imageTensor = None
+
+        self.usePilotNet = False
         
         if useNeuralNetwork:
             # Gets the trained model
@@ -413,24 +415,43 @@ class droneController(DroneInterface):
             
             self.lastCommanded = time.time()
 
-    def get_vels(self):
+    def pilot_net_inference(self):
+        lateralVel = 0
+        vels = self.model(self.imageTensor)[0].tolist()
+
+        # Gets the vels
+        # 0.3 and 0.7 with trial3 in following gates
+        angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) * self.angular_limit
+        linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) * self.linear_limit
+        self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
+
+        return angularVel, linearVelRaw, lateralVel 
+
+    def deep_pilot_inference(self):
+
         angularVel = 0
         linearVelRaw = 0
         lateralVel = 0
 
-        if not self.neuralControl:
+        return angularVel, linearVelRaw, lateralVel
+
+
+    def get_vels(self):
+
+        angularVel = 0
+        linearVelRaw = 0
+        lateralVel = 0
+
+        if self.imageTensor is not None and self.neuralControl:
+            if self.usePilotNet:
+                angularVel, linearVelRaw, lateralVel = self.pilot_net_inference()
+
+            else:
+                angularVel, linearVelRaw, lateralVel = self.deep_pilot_inference()
+        else: 
             angularVel =  self.leftY * self.angular_limit * 2
             linearVelRaw = self.leftX * self.linear_limit * 3
-            lateralVel = self.rightY * self.linear_limit / 1.5     
-
-        else: 
-            if self.imageTensor is not None:
-                vels = self.model(self.imageTensor)[0].tolist()
-
-                # Gets the vels
-                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) * self.angular_limit
-                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) * self.linear_limit
-                self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
+            lateralVel = self.rightY * self.linear_limit / 1.5    
 
         return angularVel, linearVelRaw, lateralVel       
 
@@ -463,7 +484,6 @@ class droneController(DroneInterface):
                     self.get_clock().now().nanoseconds)  
 
             # Set the velocity
-            # self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
             self.set_vel2D(linearVel, lateralVel, self.posZ, angularVel)
 
             self.vel_timestamps.append(time.time())
@@ -473,7 +493,6 @@ class droneController(DroneInterface):
     
 def goal():
     time.sleep(5)
-    print("Aaaaaaaa")
 
 def sigint_handler(signum, drone):
     # Lands the drone and clean all 

@@ -46,11 +46,15 @@ def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None, de
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
 def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimizer, device: torch.device):
-
+    useDeepPilot = True
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
-    dataset = rosbagDataset(rosbagList, transforms.pilotNet_transforms)
+    if useDeepPilot:
+        dataset = rosbagDataset(rosbagList, transforms.deepPilot_Transforms(None))
+    else:
+        dataset = rosbagDataset(rosbagList, transforms.pilotNet_transforms)
+
     dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -68,6 +72,11 @@ def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimize
 
             # get the inputs; data is a list of [inputs, labels]
             label, image = data
+            
+            #** This is for deepPilot
+            if True: # TODO: Enable deepPilot variable
+                label = [x[0] for x in label]
+
 
             # Move data to the same device as the model
             image, label = image.to(device), label.to(device)

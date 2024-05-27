@@ -43,6 +43,11 @@ install(
 )
 
 install(
+  PROGRAMS src/dataset/remoteControl.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
   PROGRAMS src/models/droneNeuralPilot.py
   DESTINATION lib/${PROJECT_NAME}
 )

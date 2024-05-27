@@ -28,7 +28,7 @@ def generate_launch_description():
     )
 
     control = Node(
-        package='tello_driver',
+        package='drone_sim_driver',
         executable='remoteControl.py',
         output='screen',
         arguments=[

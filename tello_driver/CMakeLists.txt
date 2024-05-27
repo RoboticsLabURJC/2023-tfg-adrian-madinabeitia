@@ -32,25 +32,12 @@ include_directories(
 #=============
 
 ## Install Python scripts
-install(
-  PROGRAMS src/parseWorld.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
-install(
-  PROGRAMS src/dataset/remoteControl.py
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(
-  PROGRAMS src/models/droneNeuralPilot.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 
 ## Install world and launch files
 install(
-  DIRECTORY launch config utils src
+  DIRECTORY launch config src
   DESTINATION share/${PROJECT_NAME}
 )
 
