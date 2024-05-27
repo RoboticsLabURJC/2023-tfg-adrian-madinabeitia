@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 
 import torch
-import matplotlib.pyplot as plt
 import random
-import torchvision.transforms as transforms
 import albumentations as A
-from albumentations.pytorch import ToTensorV2
-from torchvision import transforms
 import numpy as np
 import random
 from torch.utils.data import Dataset
 import torchvision.transforms.functional as F
 import os
 from PIL import Image
+
 
 # General velocity's
 MAX_ANGULAR = 2.0
@@ -87,7 +84,7 @@ def get_vels(folder_path):
 
 
 class rosbagDataset(Dataset):
-    def __init__(self, main_dir, transform, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
+    def __init__(self, main_dir, transform=None, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
         self.main_dir = main_dir
         self.transform = transform
         self.minSamples = 10
@@ -279,7 +276,3 @@ class rosbagDataset(Dataset):
         return rawDataset
 
 
-dataset_transforms = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Resize([66, 200]),
-])

@@ -14,7 +14,8 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
 
-from src.dataset.data import rosbagDataset, dataset_transforms
+from src.dataset.data import rosbagDataset
+import src.models.transforms as transforms
 from src.models.models import pilotNet
 
 writer = SummaryWriter()
@@ -49,7 +50,7 @@ def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimize
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
-    dataset = rosbagDataset(rosbagList, dataset_transforms)
+    dataset = rosbagDataset(rosbagList, transforms.pilotNet_transforms)
     dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)

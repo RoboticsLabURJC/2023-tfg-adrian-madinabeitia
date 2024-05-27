@@ -15,7 +15,9 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("tello_driver")
 sys.path.append(package_path)
 
-from src.dataset.data import rosbagDataset, dataset_transforms
+from src.dataset.data import rosbagDataset
+import src.dataset.transforms as transforms
+
 from models import pilotNet
 
 writer = SummaryWriter()
@@ -54,7 +56,9 @@ def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimiz
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
-    dataset = rosbagDataset(datasetPath, dataset_transforms)
+
+    # Use pilotNet_transforms or deepPilot_Transforms(aug)
+    dataset = rosbagDataset(datasetPath, transform=transforms.deepPilot_Transforms(None))
     dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
@@ -72,6 +76,9 @@ def train(checkpointPath, datasetPath, model: pilotNet, optimizer: optim.Optimiz
 
             # get the inputs; data is a list of [inputs, labels]
             label, image = data
+
+            #* This is for deepPilot
+            label = [x[0] for x in label]
 
             # zero the parameter gradients
             optimizer.zero_grad()
