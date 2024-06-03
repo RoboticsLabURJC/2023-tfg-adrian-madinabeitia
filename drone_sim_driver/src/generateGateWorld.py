@@ -1,6 +1,8 @@
 import math
+import numpy as np
+import random
 
-EXTRA_ROTATION = math.pi
+EXTRA_ROTATION = 0#math.pi
 
 def add_circle(center_x, center_y, radius, num_gates, rad_ang):
   positions = []
@@ -41,30 +43,48 @@ def add_line(center_x, center_y, length, num_gates, orientation):
         positions.append((x, y, 0, 0, 0, orientation + EXTRA_ROTATION))
 
     return positions
-     
-     
-  
-# Random poses
-poses = [
-    (5, 0, 0, 0, 0, 0),
-    (12, 30, 0, 0, 0, 0),
-    (9, 12, 0, 0, 0, 0),
-    (32, 13, 0, 0, 0, 0),
-    (25, -9, 0, 0, 0, 2),
-    (27, -25, 0, 0, 0, 1.8),
-    (7, -26, 0, 0, 0, 1),
-]
 
-# Center of the circle
-radius = 10
-num_gates = 20
+def ellipse():
+  # Random poses
+  num_gates = 50
+  theta = np.linspace(0, 2 * np.pi, num_gates, endpoint=False)  # Angle for each gate
 
-# Adds the circle
-poses.extend(add_circle(-24, 0.17, radius, num_gates, 2* math.pi))
-poses.extend(add_circle(-24, -40.17, radius*1.5, num_gates/3, math.pi))
+  # Define the radius and center for the oval path
+  a = 50  # Semi-major axis (horizontal radius)
+  b = 30  # Semi-minor axis (vertical radius)
+  center_x = 0
+  center_y = 0
 
-# Adds a line
-poses.extend(add_line(-45, 20,70, 25, -math.pi/2))
+  xposes = center_x + a * np.cos(theta)
+  yposes = center_y + b * np.sin(theta)
+
+  # Calculate the orientation of each point
+  orientations = []
+  for i in range(num_gates):
+      next_i = (i + 1) % num_gates  # Next index, wrapping around for the last point
+      dx = xposes[next_i] - xposes[i]
+      dy = yposes[next_i] - yposes[i]
+      orientation = np.arctan2(dy, dx)
+      orientations.append(orientation)
+
+  poses = [(xposes[i], yposes[i], 0, 0, 0, orientations[i]) for i in range(num_gates)]
+
+  return poses
+
+
+
+n_gates = 50
+
+poses = [(3, 0, 0, 0, 0, math.pi)]
+
+for i in  range(n_gates):
+  x = random.randint(8, 20) + poses[-1][0]
+  y = random.randint(-10, 10) + poses[-1][1]
+  z = random.randint(-1, 4) 
+  orient = np.arctan2(poses[-1][1] - y, poses[-1][0] - x)
+
+  poses.append((x, y, z, 0, 0, orient))
+
 
 
 xml_template = '''
@@ -84,7 +104,7 @@ xml_content = f'''<?xml version="1.0" ?>
   <world name="ocean">
 
     <include>
-      <uri>model://ground_plane</uri>
+      <uri>model://grass_plane</uri>
     </include>
 	<scene>
       <grid>false</grid>

@@ -83,7 +83,7 @@ class droneController(DroneInterface):
         self.min_angular = 0.0
         self.max_linear = 12.0
         self.min_linear = 0.0
-        self.max_z = 4.0
+        self.max_z = 20.0
         self.min_z = 0.5
 
         # Button controllers
@@ -302,7 +302,7 @@ class droneController(DroneInterface):
         # Z axis position control
         if abs(msg.axis_right_y) > 0.5 and (time.time() - self.lastCommanded) > self.joystickPeriod and not self.constZ:
             # Sets the correct sign
-            self.posZ += 0.1 * abs(msg.axis_right_y) / msg.axis_right_y
+            self.posZ += 0.3 * abs(msg.axis_right_y) / msg.axis_right_y
 
             # Security limits
             if self.posZ > self.max_z:
@@ -473,7 +473,7 @@ class droneController(DroneInterface):
             
             # Publish the info for training
             vels.x = float(linearVel)
-            vels.y = float(linearVelRaw)
+            vels.y = float(self.posZ)
             vels.z = float(angularVel)
             self.velPublisher_.publish(vels)
 

@@ -125,10 +125,10 @@ def main():
     # Instantiate rosbagDataset with the provided path
     dataset = rosbagDataset(args.rosbags_path)
 
-    img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
-    vel_topic = "/drone0/commanded_vels"    
-    # img_topic = "/cf0/sensor_measurements/hd_camera/image_raw"
-    # vel_topic = "commanded_vels"
+    # img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
+    # vel_topic = "/drone0/commanded_vels"    
+    img_topic = "/cf0/sensor_measurements/hd_camera/image_raw"
+    vel_topic = "commanded_vels"
 
     dataset.transform_data(img_topic, vel_topic)
 
