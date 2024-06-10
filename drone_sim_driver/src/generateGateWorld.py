@@ -46,7 +46,7 @@ def add_line(center_x, center_y, length, num_gates, orientation):
 
 def ellipse():
   # Random poses
-  num_gates = 50
+  num_gates = 30
   theta = np.linspace(0, 2 * np.pi, num_gates, endpoint=False)  # Angle for each gate
 
   # Define the radius and center for the oval path
@@ -72,19 +72,27 @@ def ellipse():
   return poses
 
 
+def randomLine():
+  n_gates = 50
+  poses = [(3, 0, 0, 0, 0, math.pi)]
 
-n_gates = 50
+  for i in range(n_gates):
+    x = random.randint(8, 20) + poses[-1][0]
+    y = random.randint(-10, 10) + poses[-1][1]
+    z = random.randint(-1, 4) 
+    orient = np.arctan2(poses[-1][1] - y, poses[-1][0] - x)
 
-poses = [(3, 0, 0, 0, 0, math.pi)]
+    poses.append((x, y, z, 0, 0, orient)) 
+  
+  return poses
 
-for i in  range(n_gates):
-  x = random.randint(8, 20) + poses[-1][0]
-  y = random.randint(-10, 10) + poses[-1][1]
-  z = random.randint(-1, 4) 
-  orient = np.arctan2(poses[-1][1] - y, poses[-1][0] - x)
 
-  poses.append((x, y, z, 0, 0, orient))
 
+
+
+
+
+poses = ellipse()
 
 
 xml_template = '''

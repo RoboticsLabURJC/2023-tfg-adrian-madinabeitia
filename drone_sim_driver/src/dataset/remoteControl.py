@@ -30,7 +30,7 @@ sys.path.append(package_path)
 from src.control_functions import save_timestamps, save_profiling
 from src.models.models import pilotNet
 from src.models.train import load_checkpoint
-from src.dataset.data import dataset_transforms
+from src.models.transforms import pilotNet_transforms
 
 
 # Low pass filter
@@ -41,13 +41,8 @@ VEL_PUBLISH_FREQ = 0.05
 SAVE_FREQ = 5
 
 MAX_ANGULAR = 1.5
-MAX_LINEAR = 5.0
+MAX_LINEAR = 7.0
 MIN_LINEAR = 0.0
-
-# Best P values
-pAngular = 0.3
-pLineal = 0.8 
-
 
 class droneController(DroneInterface):
 
@@ -80,10 +75,10 @@ class droneController(DroneInterface):
 
         # Limits
         self.max_angular = 3
-        self.min_angular = 0.0
+        self.min_angular = 0
         self.max_linear = 12.0
-        self.min_linear = 0.0
-        self.max_z = 20.0
+        self.min_linear = 0
+        self.max_z = 10.0
         self.min_z = 0.5
 
         # Button controllers
@@ -96,8 +91,8 @@ class droneController(DroneInterface):
         self.lastCommanded = actualTime
 
         # Defaults
-        self.angular_limit = 1#self.max_angular / 2
-        self.linear_limit = 1#self.max_linear / 2
+        self.angular_limit = 1.0
+        self.linear_limit = 1.0
         self.posZ = 2.0
         
         # Frequency analysis 
@@ -124,8 +119,6 @@ class droneController(DroneInterface):
 
         useNeuralNetwork = True
         self.imageTensor = None
-
-        self.usePilotNet = False
         
         if useNeuralNetwork:
             # Gets the trained model
@@ -196,7 +189,7 @@ class droneController(DroneInterface):
             image_array = np.array(resized_image)
         
             # Convert the resized image to a tensor for inference
-            img_tensor = dataset_transforms(image_array).to(self.device)
+            img_tensor = pilotNet_transforms(image_array).to(self.device)
             self.imageTensor = img_tensor.unsqueeze(0)
 
     # Used for recording rosbags
@@ -267,17 +260,6 @@ class droneController(DroneInterface):
         vz = errorZ * 2.5
 
         # Sends the velocity command
-        initTime = time.time()
-        self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
-            [float(velX), float(velY), float(vz)], 'earth', float(yaw))
-        
-        
-    def set_vel(self, vx, vy, vz, yaw):
-        # Gets the drone velocity's
-        velX = vx * math.cos(self.orientation[2]) + vy * math.sin(self.orientation[2])
-        velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
-
-        # Sends the velocity command
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(vz)], 'earth', float(yaw))
     
@@ -302,7 +284,7 @@ class droneController(DroneInterface):
         # Z axis position control
         if abs(msg.axis_right_y) > 0.5 and (time.time() - self.lastCommanded) > self.joystickPeriod and not self.constZ:
             # Sets the correct sign
-            self.posZ += 0.3 * abs(msg.axis_right_y) / msg.axis_right_y
+            self.posZ += 0.1 * abs(msg.axis_right_y) / msg.axis_right_y
 
             # Security limits
             if self.posZ > self.max_z:
@@ -314,10 +296,8 @@ class droneController(DroneInterface):
             self.lastCommanded = time.time()
         
         # Linear vel control
-        increment = 0.1
-
         if msg.button_l2 == 1 and (time.time() - self.lastL2) > self.buttonPeriod:
-            self.linear_limit -= increment
+            self.linear_limit -= 0.1
 
             if self.linear_limit < self.min_linear:
                 self.linear_limit = self.min_linear
@@ -326,7 +306,7 @@ class droneController(DroneInterface):
             self.get_logger().info("Max linear vel = %f" % self.linear_limit)
         
         if msg.button_r2 == 1 and (time.time() - self.lastR2) > self.buttonPeriod:
-            self.linear_limit += increment
+            self.linear_limit += 0.1
 
             if self.linear_limit > self.max_linear:
                 self.linear_limit = self.max_linear
@@ -336,7 +316,7 @@ class droneController(DroneInterface):
         
         # Angular control
         if msg.button_l1 == 1 and (time.time() - self.lastL1) > self.buttonPeriod:
-            self.angular_limit -= increment
+            self.angular_limit -= 0.1
 
             if self.angular_limit < self.min_angular:
                 self.angular_limit = self.min_angular
@@ -345,7 +325,7 @@ class droneController(DroneInterface):
             self.get_logger().info("Max angular vel = %f" % self.angular_limit)
         
         if msg.button_r1 == 1 and (time.time() - self.lastR1) > self.buttonPeriod:
-            self.angular_limit += increment
+            self.angular_limit += 0.1
 
             if self.angular_limit > self.max_angular:
                 self.angular_limit = self.max_angular
@@ -388,7 +368,6 @@ class droneController(DroneInterface):
         if (msg.button_circle == 1 and not self.recordRosbag):
             if os.path.exists(self.lastFile):
                 shutil.rmtree(self.lastFile)
-                self.get_logger().info("Deleted file %s" % self.lastFile)
                 self.recordId -= 1
         
         # With triangle locks the altitude
@@ -415,43 +394,24 @@ class droneController(DroneInterface):
             
             self.lastCommanded = time.time()
 
-    def pilot_net_inference(self):
-        lateralVel = 0
-        vels = self.model(self.imageTensor)[0].tolist()
-
-        # Gets the vels
-        # 0.3 and 0.7 with trial3 in following gates
-        angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR) * self.angular_limit
-        linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR) * self.linear_limit
-        self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
-
-        return angularVel, linearVelRaw, lateralVel 
-
-    def deep_pilot_inference(self):
-
-        angularVel = 0
-        linearVelRaw = 0
-        lateralVel = 0
-
-        return angularVel, linearVelRaw, lateralVel
-
-
     def get_vels(self):
-
         angularVel = 0
         linearVelRaw = 0
         lateralVel = 0
 
-        if self.imageTensor is not None and self.neuralControl:
-            if self.usePilotNet:
-                angularVel, linearVelRaw, lateralVel = self.pilot_net_inference()
-
-            else:
-                angularVel, linearVelRaw, lateralVel = self.deep_pilot_inference()
-        else: 
-            angularVel =  self.leftY * self.angular_limit * 2
+        if not self.neuralControl:
+            angularVel =  self.leftY * self.angular_limit * 3
             linearVelRaw = self.leftX * self.linear_limit * 3
-            lateralVel = self.rightY * self.linear_limit / 1.5    
+            lateralVel = self.rightY * self.linear_limit / 1.5     
+
+        else: 
+            if self.imageTensor is not None:
+                vels = self.model(self.imageTensor)[0].tolist()
+
+                # Gets the vels
+                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR)*self.angular_limit #+ (self.leftY) 
+                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)* self.linear_limit#+ (self.leftX) 
+                self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
 
         return angularVel, linearVelRaw, lateralVel       
 
@@ -473,7 +433,7 @@ class droneController(DroneInterface):
             
             # Publish the info for training
             vels.x = float(linearVel)
-            vels.y = float(self.posZ)
+            vels.y = float(linearVelRaw)
             vels.z = float(angularVel)
             self.velPublisher_.publish(vels)
 
@@ -484,6 +444,7 @@ class droneController(DroneInterface):
                     self.get_clock().now().nanoseconds)  
 
             # Set the velocity
+            # self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
             self.set_vel2D(linearVel, lateralVel, self.posZ, angularVel)
 
             self.vel_timestamps.append(time.time())
@@ -493,6 +454,7 @@ class droneController(DroneInterface):
     
 def goal():
     time.sleep(5)
+    print("Aaaaaaaa")
 
 def sigint_handler(signum, drone):
     # Lands the drone and clean all 

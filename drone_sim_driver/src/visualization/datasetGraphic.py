@@ -124,13 +124,22 @@ def graphData(titles, vels):
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description='Process ROS bag data')
-    parser.add_argument('--rosbags_path', type=str, help='Path to first set of ROS bags', default=DATA_PATH)
-    parser.add_argument('--rosbags_path2', type=str, help='Path to second set of ROS bags', default=None)
+    parser.add_argument('--rb', type=str, help='Path to first set of ROS bags', default=DATA_PATH)
+    parser.add_argument('--rb2', type=str, help='Path to second set of ROS bags', default=None)
+    parser.add_argument('--rb3', type=str, help='Path to third set of ROS bags', default=None)
+    parser.add_argument('--rb4', type=str, help='Path to fourth set of ROS bags', default=None)
     args = parser.parse_args()    
+    
+    # Adds all the rosbags if exists 
+    rosbagList = [args.rb]
+    if args.rb2 is not None:
+        rosbagList.append(args.rb2)
 
-    rosbagList = [args.rosbags_path]
-    if args.rosbags_path2 is not None:
-        rosbagList.append(args.rosbags_path2)
+    if args.rb3 is not None:
+        rosbagList.append(args.rb3)
+
+    if args.rb4 is not None:
+        rosbagList.append(args.rb4)
 
     # Gets the raw dataset
     data1= rosbagDataset(rosbagList, dataset_transforms, False, 1)

@@ -20,16 +20,18 @@ from src.models.models import pilotNet
 
 writer = SummaryWriter()
 
-BATCH_SIZE = 100
-LEARNING_RATE = 1e-5
+BATCH_SIZE = 50
+LEARNING_RATE = 1e-4
 MOMENT = 0.05
 
 TARGET_LOSS = 0.005
 TARGET_CONSECUTIVE_LOSS = 4
+RESUME = True
+
 
 def should_resume():
     # return "--resume" in sys.argv or "-r" in sys.argv
-    return True
+    return RESUME
 
 def save_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer):
     torch.save({
@@ -46,14 +48,12 @@ def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None, de
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
 def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimizer, device: torch.device):
-    useDeepPilot = True
+
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
 
-    if useDeepPilot:
-        dataset = rosbagDataset(rosbagList, transforms.deepPilot_Transforms(None))
-    else:
-        dataset = rosbagDataset(rosbagList, transforms.pilotNet_transforms)
+
+    dataset = rosbagDataset(rosbagList, transforms.pilotNet_transforms)
 
     dataset.balancedDataset()
 
@@ -72,11 +72,6 @@ def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimize
 
             # get the inputs; data is a list of [inputs, labels]
             label, image = data
-            
-            #** This is for deepPilot
-            if True: # TODO: Enable deepPilot variable
-                label = [x[0] for x in label]
-
 
             # Move data to the same device as the model
             image, label = image.to(device), label.to(device)
@@ -131,14 +126,24 @@ def main(filePath, rosbagList):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')
 
-    parser.add_argument('--network_path', type=str, required=True)
-    parser.add_argument('--dataset_path', type=str, required=True)
-    parser.add_argument('--dataset_path2', type=str, default=None)
+    parser.add_argument('--network', type=str, required=True)
+    parser.add_argument('--dp1', type=str, required=True)
+    parser.add_argument('--dp2', type=str, default=None)
+    parser.add_argument('--dp3', type=str, default=None)
+    parser.add_argument('--dp4', type=str, default=None)
     # -r For resume the training of a trained model
 
+    # Gets the arguments
     args = parser.parse_args()
-    rosbagList = [args.dataset_path]
-    if args.dataset_path2 is not None:
-        rosbagList.append(args.dataset_path2)
+    rosbagList = [args.dp1]
+    if args.dp2 is not None:
+        rosbagList.append(args.dp2)
 
-    main(args.network_path, rosbagList)
+    if args.dp3 is not None:
+        rosbagList.append(args.dp3)
+
+    if args.dp4 is not None:
+        rosbagList.append(args.dp4)
+
+
+    main(args.network, rosbagList)

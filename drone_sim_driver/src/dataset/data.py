@@ -3,9 +3,7 @@
 import torch
 import matplotlib.pyplot as plt
 import random
-import torchvision.transforms as transforms
 import albumentations as A
-from torchvision import transforms
 import numpy as np
 import random
 from torch.utils.data import Dataset
@@ -13,24 +11,13 @@ import torchvision.transforms.functional as F
 import os
 from PIL import Image
 
-# General velocity's
-MAX_ANGULAR = 1.5
-MAX_LINEAR = 5.0
-MIN_LINEAR = 0.0
+
 
 # Labels
 
-# Follow line
-# ANGULAR_UMBRALS = [-0.5, -0.2, 0, 0.2, 0.5, float('inf')]  # label < umbral
-# LINEAR_UMBRALS = [4.5, 5.5, float('inf')]
-
-# Gates (human pilot)
-# ANGULAR_UMBRALS = [-0.7, -0.2, 0, 0.2, 0.7, float('inf')]
-# LINEAR_UMBRALS = [3.0, 4.25, float('inf')]
-
-# Gates expert pilot
-ANGULAR_UMBRALS = [-0.45, -0.15, 0, 0.15, 0.45, float('inf')]
-LINEAR_UMBRALS = [2.0, 3.25, float('inf')]
+# Gates extended
+ANGULAR_UMBRALS = [-0.35, -0.10, 0, 0.10, 0.35, float('inf')]
+LINEAR_UMBRALS = [2.4, 3.0, float('inf')]
 
 # General aspects
 USE_WEIGHTS = True
@@ -96,11 +83,10 @@ def get_vels(folder_path):
 
 
 class rosbagDataset(Dataset):
-    def __init__(self, main_dir, transform, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
+    def __init__(self, main_dir, transform) -> None:
         self.main_dir = main_dir
         self.transform = transform
         self.minSamples = 2
-        self.dataAugment = dataAugment
         
         self.imgData = []
         self.velData = []
@@ -109,7 +95,6 @@ class rosbagDataset(Dataset):
             self.velData.extend(get_vels(dir + "/labels"))
 
         self.dataset =  self.get_dataset() 
-        self.applyAug = boolAug
         
 
     def __len__(self):
@@ -131,57 +116,19 @@ class rosbagDataset(Dataset):
     def __getitem__(self, item):
         device = torch.device("cuda:0")
         
-        angular = (self.dataset[item][1][1] + MAX_ANGULAR) / (2 * MAX_ANGULAR)
-        lineal = (self.dataset[item][1][0] + MIN_LINEAR) / (MAX_LINEAR - MIN_LINEAR)
-        norm = (lineal, angular)
+        # angular = ( + MAX_ANGULAR) / (2 * MAX_ANGULAR)
+        # lineal = ( + MIN_LINEAR) / (MAX_LINEAR - MIN_LINEAR)
 
-        # Apply augmentation
-        if self.applyAug:
-            image_tensor = torch.tensor(self.dataset[item][0]).to(device)
-            image_tensor, vel_tensor = self.applyAugmentation(device, image_tensor, norm)
+        angular = self.dataset[item][1][1] * 3
+        lineal = self.dataset[item][1][0]
+        vels = (lineal, angular)
 
-        # Not apply augmentation
-        else:
-            image_tensor = self.transform(self.dataset[item][0]).to(device)
-            vel_tensor = torch.tensor(norm).to(device)
+
+        image_tensor = self.transform(self.dataset[item][0])
+        vel_tensor = torch.tensor(vels).to(device)
 
             
         return (vel_tensor, image_tensor)    
-    
-    def applyAugmentation(self, device, imgTensor, velocityValue):
-        mov = 2
-
-        # Apply color augmentation 
-        augmented_image_tensor = self.colorAugmentation()(image=imgTensor.cpu().numpy())['image']
-        imageTensor = torch.tensor(augmented_image_tensor).clone().detach().to(device)
-
-
-        randNum = random.randint(0, 7)
-
-        # Flips the image so the angular will be in opposite way    
-        if randNum == 3 or randNum == 4:    # 2 / 8 chance
-            imageTensor = torch.flip(imageTensor, dims=[-1])
-            velTensor = torch.tensor((velocityValue[0], -velocityValue[1])).to(device)
-
-        # Horizontal movement
-        elif randNum == 20 or randNum == 10:                  # 1 / 8 chance
-            randMove = random.randint(-mov, mov)
-            imageTensor = F.affine(imageTensor, angle=0, translate=(randNum, 0), scale=1, shear=0)
-            velTensor = torch.tensor((velocityValue[0], velocityValue[1] + randMove/(mov*4))).to(device)
-
-
-        else:   # No changes                # 4 / 8 chance
-            velTensor = torch.tensor(velocityValue).to(device)
-
-        finalImgTensor = self.transform(imageTensor.cpu().numpy()).to(device)
-        return finalImgTensor, velTensor
-
-    def colorAugmentation(self, p=0.5):
-        return A.Compose([
-            A.HorizontalFlip(p=p),
-            A.RandomBrightnessContrast(),
-            A.Normalize()
-        ])
         
 
     def subSample(self, label, percent):
@@ -209,30 +156,15 @@ class rosbagDataset(Dataset):
     
     def balancedDataset(self):
         useWeights = USE_WEIGHTS
-        #   <       5     5.5   inf       Weights 1
-        # weights = [(0.85, 0.15, 0.25),     # < -0.6
-        #            (0.65, 0.55, 0.45),     # < -0.3
-        #            (0.35, 0.75, 0.995),    # < 0
-        #            (0.35, 0.75, 0.995),    # < 0.3
-        #            (0.65, 0.55, 0.45),     # < 0.6
-        #            (0.85, 0.15, 0.25)]      # < inf
-
-        # Gates => Remote pilot
-        # weights = [(0.2, 0.1, 0.0),
-        #         (0.55, 0.65, 0.25), 
-        #         (0.95, 0.95, 0.75), 
-        #         (0.95, 0.95, 0.75), 
-        #         (0.55, 0.65, 0.25),  
-        #         (0.2, 0.1, 0.0)] 
 
         # Combined dataset
-        weights = [(0.4, 0.35, 0.2),     # < -0.6
-                   (0.55, 0.65, 0.55),     # < -0.3
-                   (0.50, 0.60, 0.70),    # < 0
-                   (0.60, 0.55, 0.75),    # < 0.3
-                   (0.55, 0.65, 0.55),     # < 0.6
-                   (0.4, 0.35, 0.2)]      # < inf
-        
+        weights = [(0.7, 0.65, 0.5),     # < -0.6
+                   (0.75, 0.85, 0.75),     # < -0.3
+                   (0.70, 0.90, 0.80),    # < 0
+                   (0.70, 0.90, 0.80),    # < 0.3
+                   (0.75, 0.85, 0.75),     # < 0.6
+                   (0.7, 0.65, 0.5)]      # < inf
+                
 
         # Gets all the subsets
         labeledDataset = [self.getAngularSubset(self.dataset, float('-inf'), ANGULAR_UMBRALS[0])]
@@ -293,10 +225,6 @@ class rosbagDataset(Dataset):
                     rawDataset.append(data)
 
         self.dataset = rawDataset
+
         return rawDataset
 
-
-dataset_transforms = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Resize([66, 200]),
-])
