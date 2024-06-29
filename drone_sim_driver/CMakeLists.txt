@@ -48,7 +48,17 @@ install(
 )
 
 install(
+  PROGRAMS src/dataset/image_filter_gates.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
   PROGRAMS src/models/droneNeuralPilot.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+  PROGRAMS src/features/processImages.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

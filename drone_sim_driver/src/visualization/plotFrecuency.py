@@ -31,11 +31,10 @@ def main():
     # Gets the arguments
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')
     parser.add_argument('--file', type=str, required=True)
-    parser.add_argument('--title', type=str, required=True)
     args = parser.parse_args()
 
     data = np.load(args.file)
-    plot_frequency([data], args.title)
+    plot_frequency([data], "Freq")
 
 if __name__ == "__main__":
     main()

@@ -18,9 +18,9 @@ class rosbagDataset(Dataset):
         self.firstImgTimestamp = -1
 
         self.lastVelTimestamp = 0
-        self.associatedImage = False
+        self.associatedImage = True
         self.lastImgTimestamp = 0
-        self.associatedVel = True
+        self.associatedVel = False
 
     def transform_data(self, img_topic, vel_topic):
 
@@ -62,6 +62,7 @@ class rosbagDataset(Dataset):
                         if connection.topic == vel_topic:
                             data = deserialize_cdr(rawData, connection.msgtype)
                             angular = data.z
+                            altitude = data.y
 
                             # Conversion global frame to local frame
                             linear = data.x
@@ -75,7 +76,7 @@ class rosbagDataset(Dataset):
                                 output_path = os.path.join(labels_folder_path, f"{folderNum}_{n_vel}.txt")
                                 n_vel += 1
                                 with open(output_path, "w") as txt_file:
-                                    txt_file.write(f"{linear}, {angular}\n")
+                                    txt_file.write(f"{linear}, {angular}, {altitude}\n")
                                 self.associatedImage = False
 
                                 self.lastImgTimestamp = timestamp
@@ -125,10 +126,10 @@ def main():
     # Instantiate rosbagDataset with the provided path
     dataset = rosbagDataset(args.rosbags_path)
 
-    # img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
-    # vel_topic = "/drone0/commanded_vels"    
-    img_topic = "/cf0/sensor_measurements/hd_camera/image_raw"
-    vel_topic = "commanded_vels"
+    img_topic = "/drone0/sensor_measurements/frontal_camera/image_raw"
+    vel_topic = "/drone0/commanded_vels"    
+    # img_topic = "/cf0/sensor_measurements/hd_camera/image_raw"
+    # vel_topic = "commanded_vels"
 
     dataset.transform_data(img_topic, vel_topic)
 

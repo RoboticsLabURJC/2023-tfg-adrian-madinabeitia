@@ -8,7 +8,8 @@ import argparse
 package_path = get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
 
-from src.dataset.data import rosbagDataset, dataset_transforms, ANGULAR_UMBRALS, LINEAR_UMBRALS
+from src.dataset.oldData import rosbagDataset, ANGULAR_UMBRALS, LINEAR_UMBRALS
+from src.models.transforms import pilotNet_transforms
 
 DATA_PATH = "../../data/outDir"
 
@@ -142,7 +143,7 @@ def main():
         rosbagList.append(args.rb4)
 
     # Gets the raw dataset
-    data1= rosbagDataset(rosbagList, dataset_transforms, False, 1)
+    data1= rosbagDataset(rosbagList, pilotNet_transforms, False, 1)
     rawVels = [velocities for image, velocities in data1.dataset]
 
     # Gets the balanced dataset

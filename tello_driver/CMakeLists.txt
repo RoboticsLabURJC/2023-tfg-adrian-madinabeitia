@@ -36,10 +36,7 @@ include_directories(
 
 
 ## Install world and launch files
-install(
-  DIRECTORY launch config src
-  DESTINATION share/${PROJECT_NAME}
-)
+
 
 
 

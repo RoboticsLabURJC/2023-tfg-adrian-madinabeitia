@@ -14,32 +14,34 @@ import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
 
-from src.dataset.data import rosbagDataset
+from src.dataset.oldData import rosbagDataset
 import src.models.transforms as transforms
-from src.models.models import DeepPilot
+from src.models.models import pilotNet
 
 writer = SummaryWriter()
 
+# BATCH_SIZE = 50
 BATCH_SIZE = 25
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-5
 MOMENT = 0.05
 
 TARGET_LOSS = 0.005
 TARGET_CONSECUTIVE_LOSS = 4
-RESUME = False
+RESUME = True
+USE_DEEP_PILOT = False
 
 
 def should_resume():
     # return "--resume" in sys.argv or "-r" in sys.argv
     return RESUME
 
-def save_checkpoint(path, model: DeepPilot, optimizer: optim.Optimizer):
+def save_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer):
     torch.save({
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
     }, path)
 
-def load_checkpoint(path, model: DeepPilot, optimizer: optim.Optimizer = None, device: torch.device = torch.device("cpu")):
+def load_checkpoint(path, model: pilotNet, optimizer: optim.Optimizer = None, device: torch.device = torch.device("cpu")):
     checkpoint = torch.load(path, map_location=device)
     model.load_state_dict(checkpoint["model_state_dict"])
     model.to(device)
@@ -47,13 +49,21 @@ def load_checkpoint(path, model: DeepPilot, optimizer: optim.Optimizer = None, d
     if optimizer is not None and "optimizer_state_dict" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
-def train(checkpointPath, rosbagList, dataset, model: DeepPilot, optimizer: optim.Optimizer, device: torch.device):
+def train(checkpointPath, rosbagList, model: pilotNet, optimizer: optim.Optimizer, device: torch.device):
 
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
-    #dataset.balancedDataset()
+
+    if USE_DEEP_PILOT:
+        dataset = rosbagDataset(rosbagList, transforms.deepPilot_Transforms(None))
+    else:
+        dataset = rosbagDataset(rosbagList, transforms.pilotNet_transforms)
+
+    dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+
+    print("Starting training")
     
     consecutiveEpochs = 0  
     targetLoss = TARGET_LOSS
@@ -65,23 +75,26 @@ def train(checkpointPath, rosbagList, dataset, model: DeepPilot, optimizer: opti
         for i, data in enumerate(train_loader, 0):
 
             # get the inputs; data is a list of [inputs, labels]
-            image, label = data
-            label = label.unsqueeze(1).expand(-1, 1)
+            label, image = data
+            
+            #** This is for deepPilot
+            if USE_DEEP_PILOT: 
+                label = [x[0] for x in label]
+
 
             # Move data to the same device as the model
-            image = torch.FloatTensor(image).to(device)
-            label = torch.FloatTensor(label.float()).to(device)
+            image, label = image.to(device), label.to(device)
+
+            # zero the parameter gradients
+            optimizer.zero_grad()
 
             # forward + backward + optimize
             outputs = model(image)
             loss = criterion(outputs, label)
-            current_loss = loss.item()
             
-            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-        
             epoch_loss += loss.item()
 
             # Loss graphic
@@ -107,12 +120,9 @@ def train(checkpointPath, rosbagList, dataset, model: DeepPilot, optimizer: opti
 
 def main(filePath, rosbagList):
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    dataset = rosbagDataset(rosbagList, transforms.deepPilot_Transforms(None), "z")
 
-    model = DeepPilot(dataset.image_shape).to(device)
+    model = pilotNet().to(device)
     optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=MOMENT)
-    #optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-
 
     # Loads if theres another model
     if should_resume():
@@ -120,7 +130,7 @@ def main(filePath, rosbagList):
         load_checkpoint(filePath, model, optimizer, device)
 
     model.train(True)
-    train(filePath, rosbagList, dataset, model, optimizer, device)
+    train(filePath, rosbagList, model, optimizer, device)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Process ROS bags and plot results.')

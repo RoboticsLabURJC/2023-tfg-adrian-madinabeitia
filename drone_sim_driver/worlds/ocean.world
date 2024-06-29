@@ -2,8 +2,8 @@
 <sdf version="1.6">
   <world name="ocean">
 
-    <include>
-      <uri>model://grass_plane</uri>
+    <include> 
+      <uri>model://ground_plane</uri>
     </include>
 	<scene>
       <grid>false</grid>
@@ -17,25 +17,25 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_1</name>
-    <pose>50.0 0.0 0 0 0 1.744210551468389</pose>
+    <pose>50.0 0.0 -1 0 0 1.744210551468389</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_2</name>
-    <pose>48.907380036690284 6.23735072453278 0 0 0 2.0671155957200003</pose>
+    <pose>48.907380036690284 6.23735072453278 1 0 0 2.0671155957200003</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_3</name>
-    <pose>45.67727288213004 12.202099292274005 0 0 0 2.3369589764886802</pose>
+    <pose>45.67727288213004 12.202099292274005 2 0 0 2.3369589764886802</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_4</name>
-    <pose>40.45084971874737 17.633557568774194 0 0 0 2.5537971878641628</pose>
+    <pose>40.45084971874737 17.633557568774194 3 0 0 2.5537971878641628</pose>
 </include>
 
 <include>
@@ -47,31 +47,31 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_6</name>
-    <pose>25.000000000000007 25.980762113533157 0 0 0 2.8805510082800376</pose>
+    <pose>25.000000000000007 25.980762113533157 3 0 0 2.8805510082800376</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_7</name>
-    <pose>15.450849718747373 28.531695488854606 0 0 0 3.01474348871564</pose>
+    <pose>15.450849718747373 28.531695488854606 3 0 0 3.01474348871564</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_8</name>
-    <pose>5.226423163382684 29.8356568610482 0 0 0 3.141592653589793</pose>
+    <pose>5.226423163382684 29.8356568610482 1 0 0 3.141592653589793</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_9</name>
-    <pose>-5.226423163382667 29.835656861048204 0 0 0 -3.0147434887156406</pose>
+    <pose>-5.226423163382667 29.835656861048204 1 0 0 -3.0147434887156406</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_10</name>
-    <pose>-15.450849718747367 28.53169548885461 0 0 0 -2.8805510082800376</pose>
+    <pose>-15.450849718747367 28.53169548885461 3 0 0 -2.8805510082800376</pose>
 </include>
 
 <include>
@@ -83,7 +83,7 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_12</name>
-    <pose>-33.45653031794289 22.294344764321835 0 0 0 -2.553797187864163</pose>
+    <pose>-33.45653031794289 22.294344764321835 3 0 0 -2.553797187864163</pose>
 </include>
 
 <include>
@@ -95,13 +95,13 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_14</name>
-    <pose>-45.67727288213004 12.202099292274013 0 0 0 -2.06711559572</pose>
+    <pose>-45.67727288213004 12.202099292274013 3 0 0 -2.06711559572</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_15</name>
-    <pose>-48.90738003669028 6.237350724532792 0 0 0 -1.7442105514683899</pose>
+    <pose>-48.90738003669028 6.237350724532792 3 0 0 -1.7442105514683899</pose>
 </include>
 
 <include>
@@ -113,43 +113,43 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_17</name>
-    <pose>-48.907380036690284 -6.237350724532772 0 0 0 -1.0744770578697944</pose>
+    <pose>-48.907380036690284 -6.237350724532772 1 0 0 -1.0744770578697944</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_18</name>
-    <pose>-45.677272882130055 -12.202099292273994 0 0 0 -0.804633677101113</pose>
+    <pose>-45.677272882130055 -12.202099292273994 -1 0 0 -0.804633677101113</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_19</name>
-    <pose>-40.45084971874738 -17.63355756877419 0 0 0 -0.5877954657256304</pose>
+    <pose>-40.45084971874738 -17.63355756877419 3 0 0 -0.5877954657256304</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_20</name>
-    <pose>-33.45653031794292 -22.29434476432182 0 0 0 -0.41108814441658503</pose>
+    <pose>-33.45653031794292 -22.29434476432182 3 0 0 -0.41108814441658503</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_21</name>
-    <pose>-25.00000000000002 -25.980762113533153 0 0 0 -0.2610416453097555</pose>
+    <pose>-25.00000000000002 -25.980762113533153 -1 0 0 -0.2610416453097555</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_22</name>
-    <pose>-15.450849718747378 -28.531695488854606 0 0 0 -0.12684916487415324</pose>
+    <pose>-15.450849718747378 -28.531695488854606 3 0 0 -0.12684916487415324</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_23</name>
-    <pose>-5.226423163382711 -29.8356568610482 0 0 0 -3.398800257594421e-16</pose>
+    <pose>-5.226423163382711 -29.8356568610482 3 0 0 -3.398800257594421e-16</pose>
 </include>
 
 <include>
@@ -161,13 +161,13 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_25</name>
-    <pose>15.450849718747362 -28.53169548885461 0 0 0 0.2610416453097551</pose>
+    <pose>15.450849718747362 -28.53169548885461 2 0 0 0.2610416453097551</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_26</name>
-    <pose>24.999999999999968 -25.98076211353317 0 0 0 0.4110881444165839</pose>
+    <pose>24.999999999999968 -25.98076211353317 2 0 0 0.4110881444165839</pose>
 </include>
 
 <include>
@@ -179,19 +179,19 @@
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_28</name>
-    <pose>40.450849718747364 -17.6335575687742 0 0 0 0.8046336771011122</pose>
+    <pose>40.450849718747364 -17.6335575687742 1 0 0 0.8046336771011122</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_29</name>
-    <pose>45.677272882130026 -12.202099292274028 0 0 0 1.0744770578697924</pose>
+    <pose>45.677272882130026 -12.202099292274028 3 0 0 1.0744770578697924</pose>
 </include>
 
 <include>
     <uri>model://aruco_gate_1</uri>
     <name>aruco_gate_30</name>
-    <pose>48.90738003669028 -6.237350724532796 0 0 0 1.3973821021214037</pose>
+    <pose>48.90738003669028 -6.237350724532796 3 0 0 1.3973821021214037</pose>
 </include>
 
 

@@ -57,6 +57,7 @@ def ellipse():
 
   xposes = center_x + a * np.cos(theta)
   yposes = center_y + b * np.sin(theta)
+  zposes = []
 
   # Calculate the orientation of each point
   orientations = []
@@ -67,7 +68,8 @@ def ellipse():
       orientation = np.arctan2(dy, dx)
       orientations.append(orientation)
 
-  poses = [(xposes[i], yposes[i], 0, 0, 0, orientations[i]) for i in range(num_gates)]
+      zposes.append(random.randrange(-1, 4))
+  poses = [(xposes[i], yposes[i], zposes[i], 0, 0, orientations[i]) for i in range(num_gates)]
 
   return poses
 
@@ -87,12 +89,48 @@ def randomLine():
   return poses
 
 
-
-
-
-
+# poses = randomLine()
 
 poses = ellipse()
+
+# poses = [
+
+#     [-6.47404, -6.98526, 0, 0, 0, -2.96],
+#     [-13.5561, -9.59085, 0, 0, 0, 0],
+#     [-18.1517, -15.3409, 0, 0, 0, 0],
+#     [-19.799, -25.3114, 0, 0, 0, 0],
+#     [-23.6129, -32.0429, 0, 0, 0, 0],
+#     [-31.958, -34.5389, 0, 0, 0, 0],
+#     [-38.6226, -31.5022, 0, 0, 0, 0],
+#     [-39.2746, -22.6062, 0, 0, 0, 0],
+#     [-37.9813, -13.5741, 0, 0, 0, 0],
+#     [-32.0881, -6.03558, 0, 0, 0, 0],
+#     [-24.4027, 0.172298, 0, 0, 0, 0],
+#     [-16.109, 3.8169, 0, 0, 0, 0],
+#     [-9.17197, 9.86202, 0, 0, 0, 0],
+#     [-3.33669, 16.8607, 0, 0, 0, 0],
+#     [2.46026, 23.7222, 0, 0, 0, 0],
+#     [6.6366, 33.7054, 0, 0, 0, 0],
+#     [13.2114, 42.9063, 0, 0, 0, 0],
+#     [24.221, 48.7494, 0, 0, 0, 0],
+#     [35.1856, 46.0491, 0, 0, 0, 0],
+#     [42.5478, 39.8838, 0, 0, 0, 0],
+#     [44.1371, 32.2892, 0, 0, 0, 0],
+#     [41.0288, 22.9648, 0, 0, 0, 0],
+#     [37.2517, 14.0092, 0, 0, 0, 0],
+#     [30.4535, 6.98368, 0, 0, 0, 0],
+#     [21.9232, 1.62634, 0, 0, 0, 0],
+#     [12.027, -2.23824, 0, 0, 0, -2.79],
+#     [2.09309, -4.03768, 0, 0, 0, -2.853]
+# ]
+
+
+# for i in range(1, len(poses)- 1):
+
+#   if poses[i][5] == 0:
+#     poses[i][5] = (np.arctan2(poses[i][1] - poses[i-1][1], poses[i][0] - poses[i-1][0]) + np.arctan2(poses[i+1][1] - poses[i][1], poses[i+1][0] - poses[i][0]))/2
+
+#   # poses[i][2] = random.randrange(-1, 4)
 
 
 xml_template = '''
@@ -106,13 +144,17 @@ xml_template = '''
 # Generate XML for each pose
 xml_instances = [xml_template.format(i, ' '.join(map(str, pose))) for i, pose in enumerate(poses, start=1)]
 
+
+#ground_plane or grass_plane
+
+
 # Generate the final XML content
 xml_content = f'''<?xml version="1.0" ?>
 <sdf version="1.6">
   <world name="ocean">
 
-    <include>
-      <uri>model://grass_plane</uri>
+    <include> 
+      <uri>model://ground_plane</uri>
     </include>
 	<scene>
       <grid>false</grid>

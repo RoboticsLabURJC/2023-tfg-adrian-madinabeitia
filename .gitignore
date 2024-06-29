@@ -1,10 +1,9 @@
 drone_sim_driver/data
 drone_sim_driver/models
 drone_sim_driver/results
+drone_sim_driver/src/outDir
 
 tello_driver/data
 tello_driver/models
 tello_driver/results
 
-drone_sim_driver/src/models/__pycache__
-drone_sim_driver/src/models/runs

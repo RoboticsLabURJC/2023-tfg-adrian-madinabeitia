@@ -10,17 +10,13 @@ from sensor_msgs.msg import Image
 import time
 
 import numpy as np
+import math
 import cv2
 from cv_bridge import CvBridge
 import ament_index_python
 import os
 
-# Package includes
-package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
-sys.path.append(package_path)
 
-from src.control_functions import band_midpoint, search_top_line, search_bottom_line, save_profiling, search_farthest_column
-from droneExpertPilot import NUM_POINTS, SPACE
 
 MIN_PIXEL = -360
 MAX_PIXEL = 360
@@ -46,7 +42,7 @@ class imageFilterNode(Node):
 
         self.px_rang = MAX_PIXEL - MIN_PIXEL
         self.profiling = []
-        self.timer = self.create_timer(5.0, self.save_data)
+        #self.timer = self.create_timer(5.0, self.save_data)
 
         # Create the profiling directory if it doesn't exist
         self.outDir = out_dir
@@ -55,53 +51,32 @@ class imageFilterNode(Node):
 
         self.traceBool = trace
 
-    def save_data(self):
-        save_profiling(self.outDir + '/profiling_image.txt', self.profiling)
+    # def save_data(self):
+    #     save_profiling(self.outDir + '/profiling_image.txt', self.profiling)
 
 
-    def show_trace(self, label, mono_img, original):
-        # distancePoint = search_farthest_column(mono_img)
-        # top_point = search_top_line(mono_img)
-        # bottom_point = search_bottom_line(mono_img)
+    def show_trace(self, label, mono_img):
 
-
-        # # Image to 3 channels
-        # mono_img_color = cv2.merge([mono_img, mono_img, mono_img])
-
-        # topPoint = search_top_line(mono_img)
-        # bottomPoint = search_bottom_line(mono_img)
-        # lineDiv = NUM_POINTS
-
-        # error = 0
-        # # self.get_logger().info("%d %d" % (bottomPoint, topPoint))
-        # intervals = (bottomPoint - topPoint) / lineDiv
-        # if int(intervals) != 0:
-        #     for i in range(0, (bottomPoint - topPoint), int(intervals)):
-        #         error = band_midpoint(mono_img, topPoint + i - SPACE , topPoint + i + 1)
-        #         #self.get_logger().info("%d %d %d" % (error[0], error[1], i))
-
-
-        #         # Draws the points in the original image
-        #         cv2.circle(mono_img_color, (int(error[0]), int(i + top_point)), 5, (0, 255, 0), -1) 
-
-
-        #     #cv2.circle(mono_img_color, (red_nearest[0], bottom_point), 5, (0, 255, 0), -1) 
-        # cv2.circle(mono_img_color, (distancePoint, top_point), 5, (255, 0, 0), -1) 
-        # Show the image
         cv2.imshow(label, mono_img)
         cv2.waitKey(1)
 
-    def color_filter(self, image):
+    def color_filter(self, image, color):
 
         # Apply a red filter to the image
-        red_lower = np.array([0, 0, 70])
-        red_upper = np.array([50, 50, 255])
-        red_mask = cv2.inRange(image, red_lower, red_upper)
+        if color == "Red":
+            lower = np.array([0, 0, 70])
+            upper = np.array([50, 50, 255])
+            mask = cv2.inRange(image, lower, upper)
+        
+        else:
+            lower = np.array([50, 50, 50])
+            upper = np.array([120, 120, 120])
+            mask = cv2.inRange(image, lower, upper)
 
-        return red_mask
+        return mask
 
     def image_aperture(self, mask):
-        erosion_kernel = np.ones((2, 2), np.uint8)
+        erosion_kernel = np.ones((5, 5), np.uint8)
         dilate_kernel = np.ones((10, 10), np.uint8)
         n_erosion = 1
         n_dilatation = 1
@@ -110,10 +85,12 @@ class imageFilterNode(Node):
         eroded_mask = cv2.erode(mask, erosion_kernel, iterations=n_erosion)
         dilated_mask = cv2.dilate(eroded_mask, dilate_kernel, iterations=n_dilatation)
 
+
         return dilated_mask
     
     def filter_contours(self, contours):
-        limit_area = 20
+        limit_area = 40
+        contours, _ = cv2.findContours(contours, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # Filters small contours
         big_contours = [contour for contour in contours if cv2.contourArea(contour) > limit_area]
@@ -126,7 +103,6 @@ class imageFilterNode(Node):
             return None
 
 
-
     def listener_callback(self, msg):
 
         CallInitTime = time.time()
@@ -134,26 +110,23 @@ class imageFilterNode(Node):
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
 
         # Filters
-        initTime = time.time()
-        red_mask = self.color_filter(cv_image)
-        img = self.image_aperture(red_mask)
-
-        # contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        # filtered_contours = self.filter_contours(contours)
-        # self.profiling.append(f"\nFilter time = {time.time() - initTime}")
+        red_mask = self.color_filter(cv_image, "G")
+        aperture = self.image_aperture(red_mask)
+        a = np.zeros_like(aperture)
+        #contours, _ = cv2.findContours(img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        filtered_contours = self.filter_contours(a)
 
 
-        # # Draws only the big contour
-        # initTime = time.time()
-        # mono_img = np.zeros_like(img)
+        # Draws only the big contour
+        mono_img = np.zeros_like(aperture)
 
-        # if filtered_contours != None:
-        #     for contour in filtered_contours:
-        #         cv2.drawContours(mono_img, [contour], -1, 255, thickness=cv2.FILLED)
-        # self.profiling.append(f"\nDrawing time = {time.time() - initTime}")
+        if filtered_contours != None:
+            for contour in filtered_contours:
+                cv2.drawContours(mono_img, [contour], -1, 255, thickness=10)
 
         # Publish the filtered image
-        msg = bridge.cv2_to_imgmsg(img, encoding="mono8")
+        msg = bridge.cv2_to_imgmsg(aperture, encoding="mono8")
+        #msg = bridge.cv2_to_imgmsg(mono_img, encoding="mono8")
         self.filteredPublisher_.publish(msg)
 
         self.profiling.append(f"\nCallback time = {time.time() - CallInitTime}")
@@ -162,7 +135,7 @@ class imageFilterNode(Node):
 
         # Display the image with contours
         if self.traceBool:
-            self.show_trace("Outline: ", img, img)
+            self.show_trace("Outline: ", aperture)
 
 
 def main(args=None):

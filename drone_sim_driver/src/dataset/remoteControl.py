@@ -21,23 +21,25 @@ import argparse
 import rosbag2_py
 import torch
 from tf2_msgs.msg import TFMessage
+from PIL import Image as PilImage
 
 
 import ament_index_python
 package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
 sys.path.append(package_path)
 
-from src.control_functions import save_timestamps, save_profiling
-from src.models.models import pilotNet
+from src.control_functions import save_timestamps, save_profiling, PID
+from src.models.models import pilotNet, DeepPilot
 from src.models.train import load_checkpoint
-from src.models.transforms import pilotNet_transforms
+from src.models.transforms import pilotNet_transforms, deepPilot_Transforms
+from src.features.processImages import apply_filters
 
 
 # Low pass filter
 LINEAL_ARRAY_LENGTH = 150
 
 # Frequency's 
-VEL_PUBLISH_FREQ = 0.05
+VEL_PUBLISH_FREQ = 0.001
 SAVE_FREQ = 5
 
 MAX_ANGULAR = 1.5
@@ -48,7 +50,7 @@ class droneController(DroneInterface):
 
     def __init__(self, drone_id: str = "drone0", verbose: bool = False, 
                  use_sim_time: bool = True, profiling_directory: str = ".",
-                 network_directory: str=".") -> None:
+                 network_directory: str=".", deep_dir: str=".") -> None:
         
         super().__init__(drone_id, verbose, use_sim_time)
         self.motion_ref_handler = MotionReferenceHandlerModule(drone=self)
@@ -119,13 +121,30 @@ class droneController(DroneInterface):
 
         useNeuralNetwork = True
         self.imageTensor = None
+        self.image = None
+        self.altitudePos = 0
         
         if useNeuralNetwork:
-            # Gets the trained model
-            self.model = pilotNet()
-            load_checkpoint(network_directory, self.model)
             self.device = torch.device("cuda:0")
-            self.model.to(self.device)            
+
+            # Gets pilotNet
+            self.pilotNet = pilotNet()
+            load_checkpoint(network_directory, self.pilotNet)
+            self.pilotNet.to(self.device) 
+
+            # Gets deepPilot
+            self.deepPilot = DeepPilot([64, 64, 3]) 
+            load_checkpoint(deep_dir, self.deepPilot)
+            self.deepPilot.to(self.device)
+               
+
+        self.timeTrial = time.time()
+
+        self.altitude_pid = PID(-10, 10)
+        self.altitude_pid.set_pid(4, 100, 0)
+
+        self.controller_vel = []
+        self.drone_vel = []
 
 
     def open_bag(self):
@@ -174,23 +193,32 @@ class droneController(DroneInterface):
     # Used for recording rosbags and for the neural network
     def image_callback(self, msg):
         # Saves the topic if desired
-        if self.recordRosbag:
-            self.writer.write(
-                self.imageTopic,
-                serialize_message(msg),
-                self.get_clock().now().nanoseconds)    
+
 
         # Gets the image for the neural network
-        if self.neuralControl:
-            bridge = CvBridge()
-            cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
-            resized_image = cv2.resize(cv_image, (64, 64))
+        #if self.neuralControl or self.recordRosbag:
+        bridge = CvBridge()
+        self.image = msg
+        cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
+        resized_image = cv2.resize(cv_image, (int(224), int(224)))
+            
+        # Processing for reprocessed image
+        #resized_image = apply_filters(resized_image)
 
-            image_array = np.array(resized_image)
+        self.image_array = np.array(resized_image)
         
-            # Convert the resized image to a tensor for inference
-            img_tensor = pilotNet_transforms(image_array).to(self.device)
-            self.imageTensor = img_tensor.unsqueeze(0)
+        # Convert the resized image to a tensor for inference
+        img_tensor = pilotNet_transforms(self.image_array).to(self.device)
+        self.imageTensor = img_tensor.unsqueeze(0)
+
+        if self.recordRosbag:
+            if self.image != None:
+                self.writer.write(
+                    self.imageTopic,
+                    serialize_message(self.image),
+                    self.get_clock().now().nanoseconds)    
+
+            
 
     # Used for recording rosbags
     def tf_callback(self, msg):
@@ -210,6 +238,10 @@ class droneController(DroneInterface):
         # Data for profiling
         save_timestamps(profilingDir + '/general_timestamps.npy', self.generalTimestamps)
         save_timestamps(profilingDir + '/vel_timestamps.npy', self.vel_timestamps)
+
+        save_timestamps(profilingDir + '/controller_vel.npy', self.controller_vel)
+        save_timestamps(profilingDir + '/drone_vel.npy', self.drone_vel)
+
         save_profiling(profilingDir + '/profiling_data.txt', self.profiling)
 
     def take_off_process(self):
@@ -257,11 +289,24 @@ class droneController(DroneInterface):
 
         # Z position control
         errorZ = float(pz) - self.position[2]
-        vz = errorZ * 2.5
+        vz = self.altitude_pid.get_pid(errorZ)
 
+        self.controller_vel.append(pz)
+        self.drone_vel.append(self.position[2])
+        
+        # #!Deep pilot
+        # transformat = deepPilot_Transforms(None)
+        # data = PilImage.fromarray(self.image_array)
+        # image = transformat(data).unsqueeze(0)
+        # image_tensor = torch.FloatTensor(image).to(self.device)
+        # vz  = self.deepPilot(image_tensor) 
+        # self.get_logger().info("Altitude = %d" % vz)
+
+
+        self.altitudePos= vz# + float(pz)
         # Sends the velocity command
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
-            [float(velX), float(velY), float(vz)], 'earth', float(yaw))
+            [float(velX), float(velY), float(self.altitudePos)], 'earth', float(yaw))
     
     def land_process(self):
         self.get_logger().info("Landing...")
@@ -281,10 +326,11 @@ class droneController(DroneInterface):
             self.landBool = True
     
     def velocity_control(self, msg):
+        velChange = 0.1
         # Z axis position control
-        if abs(msg.axis_right_y) > 0.5 and (time.time() - self.lastCommanded) > self.joystickPeriod and not self.constZ:
+        if not self.constZ:
             # Sets the correct sign
-            self.posZ += 0.1 * abs(msg.axis_right_y) / msg.axis_right_y
+            self.posZ += (msg.axis_right_y / 20)
 
             # Security limits
             if self.posZ > self.max_z:
@@ -293,11 +339,10 @@ class droneController(DroneInterface):
             if self.posZ < self.min_z:
                 self.posZ = self.min_z
 
-            self.lastCommanded = time.time()
         
         # Linear vel control
         if msg.button_l2 == 1 and (time.time() - self.lastL2) > self.buttonPeriod:
-            self.linear_limit -= 0.1
+            self.linear_limit -= velChange
 
             if self.linear_limit < self.min_linear:
                 self.linear_limit = self.min_linear
@@ -306,7 +351,7 @@ class droneController(DroneInterface):
             self.get_logger().info("Max linear vel = %f" % self.linear_limit)
         
         if msg.button_r2 == 1 and (time.time() - self.lastR2) > self.buttonPeriod:
-            self.linear_limit += 0.1
+            self.linear_limit += velChange
 
             if self.linear_limit > self.max_linear:
                 self.linear_limit = self.max_linear
@@ -316,7 +361,7 @@ class droneController(DroneInterface):
         
         # Angular control
         if msg.button_l1 == 1 and (time.time() - self.lastL1) > self.buttonPeriod:
-            self.angular_limit -= 0.1
+            self.angular_limit -= velChange
 
             if self.angular_limit < self.min_angular:
                 self.angular_limit = self.min_angular
@@ -325,7 +370,7 @@ class droneController(DroneInterface):
             self.get_logger().info("Max angular vel = %f" % self.angular_limit)
         
         if msg.button_r1 == 1 and (time.time() - self.lastR1) > self.buttonPeriod:
-            self.angular_limit += 0.1
+            self.angular_limit += velChange
 
             if self.angular_limit > self.max_angular:
                 self.angular_limit = self.max_angular
@@ -400,58 +445,67 @@ class droneController(DroneInterface):
         lateralVel = 0
 
         if not self.neuralControl:
-            angularVel =  self.leftY * self.angular_limit * 3
-            linearVelRaw = self.leftX * self.linear_limit * 3
-            lateralVel = self.rightY * self.linear_limit / 1.5     
+            angularVel =  self.leftY * self.angular_limit 
+            linearVelRaw = self.leftX * self.linear_limit 
+            lateralVel = self.rightY * self.linear_limit / 1.5  
+
+
+
 
         else: 
             if self.imageTensor is not None:
-                vels = self.model(self.imageTensor)[0].tolist()
+                vels = self.pilotNet(self.imageTensor)[0].tolist()
 
                 # Gets the vels
-                angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR)*self.angular_limit #+ (self.leftY) 
-                linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)* self.linear_limit#+ (self.leftX) 
+                # angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR)*self.angular_limit #+ (self.leftY) 
+                # linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)* self.linear_limit#+ (self.leftX) 
+                
+                angularVel = vels[1] / 3 * self.angular_limit + (self.leftY) 
+                linearVelRaw = vels[0] * self.linear_limit + (self.leftX) 
                 self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
 
-        return angularVel, linearVelRaw, lateralVel       
+
+        return angularVel, linearVelRaw, 0.0       
 
 
     def remote_control(self):
         vels = Point()
         if self.info['state'] == PlatformStatus.FLYING:
             initTime = time.time()
+            if  initTime - self.timeTrial >= 0.005:
+                # Gets drone velocity's
+                angularVel, linearVelRaw, lateralVel = self.get_vels() 
 
-            # Gets drone velocity's
-            angularVel, linearVelRaw, lateralVel = self.get_vels() 
+                # Smooths linear vel with a low pass filter
+                self.lastVels.append(linearVelRaw)
+                if len(self.lastVels) > LINEAL_ARRAY_LENGTH:
+                    self.lastVels.pop(0)
+                
+                linearVel = np.mean(self.lastVels)
+                
+                # Publish the info for training
+                vels.x = float(linearVel)
+                vels.y = float(self.altitudePos)
+                vels.z = float(angularVel)
+                self.velPublisher_.publish(vels)
 
-            # Smooths linear vel with a low pass filter
-            self.lastVels.append(linearVelRaw)
-            if len(self.lastVels) > LINEAL_ARRAY_LENGTH:
-                self.lastVels.pop(0)
-            
-            linearVel = np.mean(self.lastVels)
-            
-            # Publish the info for training
-            vels.x = float(linearVel)
-            vels.y = float(linearVelRaw)
-            vels.z = float(angularVel)
-            self.velPublisher_.publish(vels)
+                if self.recordRosbag:
+                    self.writer.write(
+                        self.velTopic,
+                        serialize_message(vels),
+                        self.get_clock().now().nanoseconds)  
 
-            if self.recordRosbag:
-                self.writer.write(
-                    self.velTopic,
-                    serialize_message(vels),
-                    self.get_clock().now().nanoseconds)  
 
-            # Set the velocity
-            # self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
-            self.set_vel2D(linearVel, lateralVel, self.posZ, angularVel)
 
-            self.vel_timestamps.append(time.time())
-            self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
+                # Set the velocity
+                # self.get_logger().info("Linear = %f  | Angular = %f" % (linearVel, angularVel))
+                self.set_vel2D(linearVel, lateralVel, self.posZ, angularVel)
 
-            self.profiling.append(f"\nMotion_ref_handler = {time.time() - initTime}")
-    
+                self.vel_timestamps.append(time.time())
+                self.profiling.append(f"\nTimer callback = {time.time() - initTime}")
+
+                self.profiling.append(f"\nMotion_ref_handler = {time.time() - initTime}")
+                self.timeTrial = time.time()
 def goal():
     time.sleep(5)
     print("Aaaaaaaa")
@@ -476,16 +530,19 @@ def main(args=None):
 
     # Gets the necessary arguments
     parser = argparse.ArgumentParser(description='Drone Controller with Profiling', allow_abbrev=False)
-    parser.add_argument('--output_directory', type=str, help='Directory to save profiling files', required=True)
-    parser.add_argument('--network_directory', type=str, required=True)
+    parser.add_argument('--output_dir', type=str, help='Directory to save profiling files', required=True)
+    parser.add_argument('--network_dir', type=str, required=True)
+    parser.add_argument('--dp_dir', type=str, required=True)
+
     parsed_args, _ = parser.parse_known_args()
     signal.signal(signal.SIGINT, lambda signum, frame: sigint_handler(signum, frame, drone))
 
 
     # Controller node
     drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True, 
-                            profiling_directory=parsed_args.output_directory,
-                            network_directory=parsed_args.network_directory)
+                            profiling_directory=parsed_args.output_dir,
+                            network_directory=parsed_args.network_dir,
+                            deep_dir=parsed_args.dp_dir)
     
     drone.take_off_process()
     
@@ -494,6 +551,7 @@ def main(args=None):
     # Start the flight
     while rclpy.ok() and not drone.landBool:
         try:
+            
             drone.remote_control()
 
             if time.time() - initTime >= SAVE_FREQ: 

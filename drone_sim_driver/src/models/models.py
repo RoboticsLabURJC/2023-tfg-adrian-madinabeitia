@@ -8,6 +8,8 @@ class pilotNet(nn.Module):
         super(pilotNet, self).__init__()
 
         self.network = nn.Sequential(
+            # 1 for filtered image
+            # 3 for normal image
             nn.BatchNorm2d(3),
             nn.Conv2d(3, 24, 5, 2),
             nn.ReLU(),
@@ -32,13 +34,12 @@ class pilotNet(nn.Module):
 
 
 class DeepPilot(nn.Module):
-    def __init__(self,
-                image_shape):
+    def __init__(self, imgShape):
         super(DeepPilot, self).__init__()
 
-        self.img_height = image_shape[0]
-        self.img_width = image_shape[1]
-        self.num_channels = image_shape[2]
+        self.img_height = imgShape[0]
+        self.img_width =  imgShape[1]
+        self.num_channels = imgShape[2]
 
         self.cn_1 = nn.Conv2d(self.num_channels, 64, kernel_size=(7,7), stride=(2,2))
         self.po_1 = nn.MaxPool2d(kernel_size=(3,3),stride=(2,2))
@@ -184,6 +185,6 @@ class DeepPilot(nn.Module):
         # aOut = self.fc_a2(aOut)
 
         # out_final = torch.cat((rOut, pOut, yOut, aOut), dim=1)
-        out_final = torch.cat((rOut, pOut, yOut), dim=1)
+        out_final = (rOut + pOut + yOut) / 3
 
         return out_final
