@@ -288,22 +288,22 @@ class droneController(DroneInterface):
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
 
         # Z position control
-        errorZ = float(pz) - self.position[2]
-        vz = self.altitude_pid.get_pid(errorZ)
+        # errorZ = float(pz) - self.position[2]
+        # vz = self.altitude_pid.get_pid(errorZ)
 
-        self.controller_vel.append(pz)
-        self.drone_vel.append(self.position[2])
+        # self.controller_vel.append(pz)
+        # self.drone_vel.append(self.position[2])
         
-        # #!Deep pilot
-        # transformat = deepPilot_Transforms(None)
-        # data = PilImage.fromarray(self.image_array)
-        # image = transformat(data).unsqueeze(0)
-        # image_tensor = torch.FloatTensor(image).to(self.device)
-        # vz  = self.deepPilot(image_tensor) 
-        # self.get_logger().info("Altitude = %d" % vz)
+        #!Deep pilot
+        imgTransform = deepPilot_Transforms(None)
+        data = PilImage.fromarray(self.image_array)
+        image = imgTransform(data).unsqueeze(0)
+        image_tensor = torch.FloatTensor(image).to(self.device)
+        vz  = self.deepPilot(image_tensor)
+        #self.get_logger().info("Altitude = %d" % vz)
 
 
-        self.altitudePos= vz# + float(pz)
+        self.altitudePos= vz
         # Sends the velocity command
         self.motion_ref_handler.speed.send_speed_command_with_yaw_speed(
             [float(velX), float(velY), float(self.altitudePos)], 'earth', float(yaw))
@@ -457,12 +457,9 @@ class droneController(DroneInterface):
                 vels = self.pilotNet(self.imageTensor)[0].tolist()
 
                 # Gets the vels
-                # angularVel = ((vels[1] * (2 * MAX_ANGULAR))  - MAX_ANGULAR)*self.angular_limit #+ (self.leftY) 
-                # linearVelRaw = ((vels[0] * (MAX_LINEAR - MIN_LINEAR)) - MIN_LINEAR)* self.linear_limit#+ (self.leftX) 
-                
-                angularVel = vels[1] / 3 * self.angular_limit + (self.leftY) 
-                linearVelRaw = vels[0] * self.linear_limit + (self.leftX) 
-                self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
+                angularVel = vels[1] / 3 * self.angular_limit
+                linearVelRaw = vels[0] * self.linear_limit
+                #self.get_logger().info("Linear inference = %f  | Angular inference = %f" % (linearVelRaw, angularVel))
 
 
         return angularVel, linearVelRaw, 0.0       

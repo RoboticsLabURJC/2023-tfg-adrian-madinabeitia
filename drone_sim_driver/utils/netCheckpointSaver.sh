@@ -15,6 +15,7 @@ while true; do
     
     cp "$network_path" "$new_network_path"
 
-    sleep 13000
+    echo Copy $new_network_path created
+    sleep 7200
     ((iteration++))
 done

@@ -29,7 +29,7 @@ def generate_launch_description():
 
     deepDir = DeclareLaunchArgument(
         'deepDir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/deepPilot/z/net.tar"
+        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/deepPilot/z/net-7.tar" # 7-9
     )
 
     control = Node(

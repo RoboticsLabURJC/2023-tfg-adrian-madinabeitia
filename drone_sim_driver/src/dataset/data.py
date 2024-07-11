@@ -18,7 +18,7 @@ from PIL import Image
 # Gates extended
 LINEAR_UMBRALS = [3.5, 5.0, float('inf')]
 ANGULAR_UMBRALS = [-0.35, -0.10, 0, 0.10, 0.35, float('inf')]
-ALTITUDE_UMBRALS = [-1, -0.5, 0, 0.5, 1, float("inf")]
+ALTITUDE_UMBRALS = [-1, -0.15, 0, 0.15, 1, float("inf")]
 
 ALL_UMBRALS = [LINEAR_UMBRALS, ANGULAR_UMBRALS, ALTITUDE_UMBRALS]
 
@@ -150,7 +150,7 @@ class rosbagDataset(Dataset):
         useWeights = True
 
         # Combined dataset
-        weights = [0.6, 0.4, 1.0, 1.0, 0.4, 0.6]
+        weights = [0.8, 0.65, 1.0, 1.0, 0.65, 0.8]
                 
         # Gets all the subsets
         umbralIndex = velsDict[self.spaceComponent]

@@ -103,7 +103,7 @@ def main():
 
     # plt.show()
     title = args.c + " data: " + str(len(balancedVels))
-    graphData(title, balancedVels, args.c)
+    graphData(title, rawVels, args.c)
 
 
 if __name__ == "__main__":

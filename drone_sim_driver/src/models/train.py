@@ -51,7 +51,7 @@ def train(checkpointPath, rosbagList, dataset, model: DeepPilot, optimizer: opti
 
     # Mean Squared Error Loss
     criterion = nn.MSELoss()
-    #dataset.balancedDataset()
+    dataset.balancedDataset()
 
     train_loader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
     
@@ -146,3 +146,4 @@ if __name__ == "__main__":
 
 
     main(args.network, rosbagList)
+    #python3 models/train.py --network ../models/deepPilot/z/net.tar --dp1 ../data/zDeepPilot1/ --dp2 ../data/zDeepPilot2/ --dp3 ../data/zDeepPilot3/
