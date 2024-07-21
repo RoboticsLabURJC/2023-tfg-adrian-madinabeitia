@@ -43,7 +43,7 @@ This project has two packages: one contains all the drone platforms, and the oth
 
 We follow the following [repository distribution](https://medium.com/analytics-vidhya/folder-structure-for-machine-learning-projects-a7e451a8caaa) for machine learning projects, along with the basic ROS structure.
 
----
+The models and the dataset occupy significant space, so it was decided to use [hugging Face](https://huggingface.co/) to host all this data. Thus, a repository was created for the [dataset](https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation) and another for the [models](https://huggingface.co/Adrimapo/models_tfg_drone_simulation)
 
 ---
 
@@ -112,7 +112,7 @@ python3 models/train.py --model [pilotNet|deepPilot] --resume [true or false] --
 
 ## Follow line application
 
-For the imitation learning validation in this exercise, we collected a dataset with an algorithmic pilot, the dataset is available in the next [repository](https://huggingface.co/datasets/Adrimapo/tfg_2024_drone_simulation/tree/main). Clicking the next image you can watch the demo video:
+For the imitation learning validation in this exercise, we collected a dataset with an algorithmic pilot. Clicking the next image you can watch the demo video:
 
 [![Youtube video](https://img.youtube.com/vi/jJ4Xdin1gg4/0.jpg)](https://www.youtube.com/watch?v=jJ4Xdin1gg4)
 
@@ -177,7 +177,7 @@ To speed up the model selection process for this application, the following scri
 
 ## Gate traversing application
 
-In this application we collected two datasets, one more generic for the pilotNet training (available in the next [repository](https://huggingface.co/datasets/Adrimapo/tfg_2024_drone_simulation/tree/main) where it's all the verified dataset of the project)
+In this application we collected two datasets, one more generic for the pilotNet training. The results of this application where successful too: 
 
 ### 1. Constant Altitude
 
