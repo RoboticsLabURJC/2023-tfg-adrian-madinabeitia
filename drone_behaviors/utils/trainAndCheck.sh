@@ -33,13 +33,13 @@ worldIter=0
 
 for world in "${test_worlds[@]}"; do
     pilots=(
-    "ros2 launch drone_sim_driver neuralPilot.launch.py trace:=False out_dir:=${output_directory}$world/profiling/neural_$world network_path:=$model_name"
-    "ros2 launch drone_sim_driver expertPilot.launch.py trace:=False out_dir:=${output_directory}$world/profiling/expert_$world"
+    "ros2 launch drone_behaviors neuralPilot.launch.py trace:=False out_dir:=${output_directory}$world/profiling/neural_$world network_path:=$model_name"
+    "ros2 launch drone_behaviors expertPilot.launch.py trace:=False out_dir:=${output_directory}$world/profiling/expert_$world"
     )
     for pilot in "${pilots[@]}"; do
     
         # Executes the simulator
-        tmux send-keys -t 0 "ros2 launch drone_sim_driver as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=3.14" C-m
+        tmux send-keys -t 0 "ros2 launch drone_platforms as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=3.14" C-m
         sleep 5
 
         tmux send-keys -t 1 "$pilot | tee temp_output.txt" C-m

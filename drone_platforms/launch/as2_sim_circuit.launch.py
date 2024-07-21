@@ -17,12 +17,12 @@ def exit_process_function(_launch_context, route, ns):
     subprocess.run(["bash", route, ns], check=True)
 
 def generate_launch_description():
-    sim_config = os.path.join(get_package_share_directory('drone_sim_driver'), 'config')
-    utils_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'utils')
+    sim_config = os.path.join(get_package_share_directory('drone_platforms'), 'config')
+    utils_path = os.path.join(get_package_share_directory('drone_platforms'), 'utils')
 
     world = DeclareLaunchArgument(
         'world',
-        default_value="../worlds/ocean.world"
+        default_value="../worlds/nurburgring_line.world"
     )
     yaw = DeclareLaunchArgument(
         'yaw',
@@ -70,7 +70,7 @@ def generate_launch_description():
 
 
     parseYaml = Node(
-        package='drone_sim_driver',
+        package='drone_platforms',
         executable='parseWorld.py',
         output='screen',
         arguments=[

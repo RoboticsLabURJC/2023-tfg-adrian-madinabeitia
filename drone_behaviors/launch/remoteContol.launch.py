@@ -24,16 +24,16 @@ def generate_launch_description():
 
     net_dir = DeclareLaunchArgument(
         'net_dir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/gateV2Normal/net-1.tar"
+        default_value="/home/adrian/workspace/src/tfg/drone_behaviors/models/gateV2Normal/net-1.tar"
     )
 
     deepDir = DeclareLaunchArgument(
         'deepDir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/deepPilot/z/net-7.tar" # 7-9
+        default_value="/home/adrian/workspace/src/tfg/drone_behaviors/models/deepPilot/z/net-7.tar" # 7-9
     )
 
     control = Node(
-        package='drone_sim_driver',
+        package='drone_behaviors',
         executable='remoteControl.py',
         output='screen',
         arguments=[

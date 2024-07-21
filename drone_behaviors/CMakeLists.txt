@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(drone_sim_driver)
+project(drone_behaviors)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -32,10 +32,6 @@ include_directories(
 ## Install Python scripts
 
 
-install(
-  PROGRAMS src/parseWorld.py
-  DESTINATION lib/${PROJECT_NAME}
-)
 
 install(
   PROGRAMS src/dataset/droneExpertPilot.py
@@ -74,7 +70,7 @@ install(
 
 ## Install world and launch files
 install(
-  DIRECTORY launch worlds config sim_assets utils src
+  DIRECTORY launch utils src
   DESTINATION share/${PROJECT_NAME}
 )
 

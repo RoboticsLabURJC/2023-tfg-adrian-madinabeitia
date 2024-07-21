@@ -24,11 +24,11 @@ for world in "${worlds[@]}"; do
     for yaw in "${orientations[@]}"; do
     
         # Executes the simulator
-        tmux send-keys -t 0 "ros2 launch drone_sim_driver as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=$yaw" C-m
+        tmux send-keys -t 0 "ros2 launch drone_platforms as2_sim_circuit.launch.py world:=../worlds/$world.world yaw:=$yaw" C-m
         sleep 5
         
         touch temp_output.txt
-        tmux send-keys -t 1 "ros2 launch drone_sim_driver expertPilot.launch.py trace:=False out_dir:=$output_directory/profiling/$world$iteration | tee ./temp_output.txt" C-m
+        tmux send-keys -t 1 "ros2 launch drone_behaviors expertPilot.launch.py trace:=False out_dir:=$output_directory/profiling/$world$iteration | tee ./temp_output.txt" C-m
         
         sleep 5
 
