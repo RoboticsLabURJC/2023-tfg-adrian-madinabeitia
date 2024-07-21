@@ -27,11 +27,11 @@ Usually, classical programming algorithms are used for drone control. The contro
   - [Follow line application](#follow-line-application)
     - [Algorithmic expert pilot](#algorithmic-expert-pilot)
     - [Getting the best model](#getting-the-best-model)
-  - [Gate travesing application](#gate-travesing-application)
+  - [Gate traversing application](#gate-traversing-application)
     - [1. Constant Altitude](#1-constant-altitude)
     - [2. Variable Altitude](#2-variable-altitude)
     - [Remote pilot control](#remote-pilot-control)
-  - [Licencia](#licencia)
+  - [License](#license)
 
 ---
 
@@ -175,7 +175,7 @@ To speed up the model selection process for this application, the following scri
 
 ---
 
-## Gate travesing application
+## Gate traversing application
 
 In this application we collected two datasets, one more generic for the pilotNet training (available in the next [repository](https://huggingface.co/datasets/Adrimapo/tfg_2024_drone_simulation/tree/main) where it's all the verified dataset of the project)
 
@@ -215,6 +215,6 @@ ros2 launch drone_behaviors remoteControl.launch.py out_dir:=PATH net_dir:=PILOT
 
 ---
 
-## Licencia
+## License
 
-<a rel="license" href=<https://www.apache.org/licenses/LICENSE-2.0>><img alt="Apache License" style="border-width:0" src=<https://www.apache.org/img/asf-estd-1999-logo.jpg> /></a><br/> </a><br/>This work is licensed under a <a rel="license" href=<https://www.apache.org/licenses/LICENSE-2.0>Apache> license 2.0
+<a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="Apache License" style="border-width:0" src="https://www.apache.org/img/asf-estd-1999-logo.jpg" /></a><br/> </a><br/>This work is licensed under a <a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0">Apache license 2.0
