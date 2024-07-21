@@ -39,7 +39,7 @@ Usually, classical programming algorithms are used for drone control. The contro
 
 ## Repository distribution
 
-This project has two packages: one contains all the drone platforms [drone_plataforms](), and the other contains the behaviors programmed into the drone [drone_behaviors](). The drone is able to perform two applications: the line-following application and the gate-traversing application.
+This project has two packages: one contains all the drone platforms, and the other contains the behaviors programmed into the drone_behaviors packages. The drone is able to perform two applications: the line-following application and the gate-traversing application.
 
 We follow the following [repository distribution](https://medium.com/analytics-vidhya/folder-structure-for-machine-learning-projects-a7e451a8caaa) for machine learning projects, along with the basic ROS structure.
 
@@ -49,7 +49,7 @@ We follow the following [repository distribution](https://medium.com/analytics-v
 
 ## Drone platforms
 
-We used de [aerostack2](https://github.com/aerostack2/aerostack2) platforms to utilize all the programmed behaviors in multiple drones. The platform launchers are in the package [drone_plataforms](). This package was created to separate the platform used from the behavior, thus allowing the developed software to be used in real drones in the future.
+We used de [aerostack2](https://github.com/aerostack2/aerostack2) platforms to utilize all the programmed behaviors in multiple drones. The platform launchers are in the package drone_platforms This package was created to separate the platform used from the behavior, thus allowing the developed software to be used in real drones in the future.
 
 1. For launching follow line world:
 
@@ -112,7 +112,7 @@ python3 models/train.py --model [pilotNet|deepPilot] --resume [true or false] --
 
 ## Follow line application
 
-For the imitation learning validation in this exercise, we collected a dataset with an algorithmic pilot, the dataset is available in the next [link](). Clicking the next image you can watch the demo video:
+For the imitation learning validation in this exercise, we collected a dataset with an algorithmic pilot, the dataset is available in the next [repository](https://huggingface.co/datasets/Adrimapo/tfg_2024_drone_simulation/tree/main). Clicking the next image you can watch the demo video:
 
 [![Youtube video](https://img.youtube.com/vi/jJ4Xdin1gg4/0.jpg)](https://www.youtube.com/watch?v=jJ4Xdin1gg4)
 
@@ -177,7 +177,7 @@ To speed up the model selection process for this application, the following scri
 
 ## Gate travesing application
 
-In this application we collected two datasets, one more generic for the pilotNet training (available in the next [link]()) and another one, more specialized in altitude movements for the deepPilot training (available in the next [link]())
+In this application we collected two datasets, one more generic for the pilotNet training (available in the next [repository](https://huggingface.co/datasets/Adrimapo/tfg_2024_drone_simulation/tree/main) where it's all the verified dataset of the project)
 
 ### 1. Constant Altitude
 
