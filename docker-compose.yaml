@@ -1,0 +1,21 @@
+services:
+  aerostack2:
+    image: imitation_learning
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: imitation_learning
+    environment:
+      DISPLAY: $DISPLAY
+      PX4_FOLDER: /PX4-Autopilot
+      ROS_LOCALHOST_ONLY: 0
+      ROS_DOMAIN_ID: 0
+    privileged: true
+    volumes:
+      # X11
+      - ~/.Xauthority:/root/.Xauthority
+      # 
+      - /dev/:/dev
+      - .:/root/ws/src/2023-tfg-adrian-madinabeitia
+    network_mode: "host"
+    command: tail -f /dev/null
