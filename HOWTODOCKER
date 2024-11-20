@@ -1,0 +1,40 @@
+# HOWTODOCKER
+
+# Build and run (using docker-compose)
+```
+xhost +
+docker compose up -d # use the -d for keep the container alive in background
+docker exec -it imitation_learning /bin/bash
+```
+
+## Manual build container
+
+```bash
+docker build -t imitation_learning .
+```
+
+## Manual run docker container
+```bash
+xhost +
+docker run -it --rm -v /tmp/.X11-unix:/tmp/.X11-unix -e DISPLAY=$DISPLAY imitation_learning
+```
+
+### Launch PX4 and Gazebo11 only
+
+```bash
+cd /path/to/PX4-Autopilot
+make px4_sitl gazebo-classic
+```
+
+---
+
+```
+chmod +x $AS2_GZ_ASSETS_SCRIPT_PATH/default_run.sh $AS2_GZ_ASSETS_SCRIPT_PATH/run_sitl.sh $AS2_GZ_ASSETS_SCRIPT_PATH/parse_json.py $AS2_GZ_ASSETS_SCRIPT_PATH/jinja_gen.py
+cd /root/ws/src/2023-tfg-adrian-madinabeitia/drone_platforms
+$AS2_GZ_ASSETS_SCRIPT_PATH/default_run.sh config/world.json
+```
+
+```
+cd /root/ws/src/2023-tfg-adrian-madinabeitia/drone_platforms
+tmuxinator start -n drone0 -p config/tmuxLaunch.yml drone_namespace=drone0 simulation_time=true config_path=config/
+```
