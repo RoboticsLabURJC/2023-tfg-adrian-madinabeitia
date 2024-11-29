@@ -11,7 +11,7 @@ import sys
 import ament_index_python
 
 # Package includes
-package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
+package_path = ament_index_python.get_package_share_directory("drone_behaviors")
 sys.path.append(package_path)
 
 from src.dataset.oldData import rosbagDataset

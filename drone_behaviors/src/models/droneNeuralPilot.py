@@ -18,7 +18,7 @@ import os
 from geometry_msgs.msg import Point
 
 # Package includes
-package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
+package_path = ament_index_python.get_package_share_directory("drone_behaviors")
 sys.path.append(package_path)
 
 from src.control_functions import PID, save_timestamps, save_profiling

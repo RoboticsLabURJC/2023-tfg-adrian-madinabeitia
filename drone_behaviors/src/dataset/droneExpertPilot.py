@@ -16,7 +16,7 @@ import os
 import argparse
 
 import ament_index_python
-package_path = ament_index_python.get_package_share_directory("drone_sim_driver")
+package_path = ament_index_python.get_package_share_directory("drone_behaviors")
 sys.path.append(package_path)
 
 from src.control_functions import PID, band_midpoint, search_top_line, search_bottom_line, save_timestamps, save_profiling, search_farthest_column

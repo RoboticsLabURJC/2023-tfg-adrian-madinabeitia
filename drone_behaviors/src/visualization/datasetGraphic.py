@@ -5,7 +5,7 @@ import sys
 from ament_index_python.packages import get_package_share_directory
 import argparse
 
-package_path = get_package_share_directory("drone_sim_driver")
+package_path = get_package_share_directory("drone_behaviors")
 sys.path.append(package_path)
 
 from src.dataset.oldData import rosbagDataset, ANGULAR_UMBRALS, LINEAR_UMBRALS
