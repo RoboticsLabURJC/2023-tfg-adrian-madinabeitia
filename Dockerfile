@@ -119,7 +119,7 @@ RUN git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git --branch v2.4
 RUN git clone https://github.com/PX4/px4_msgs.git src/px4/px4_msgs -b release/1.14
 
 RUN git clone https://github.com/aerostack2/aerostack2.git -b 1.0.9 src/aerostack2
-RUN git clone https://github.com/pariaspe/2023-tfg-adrian-madinabeitia.git src/2023-tfg-adrian-madinabeitia
+RUN git clone https://github.com/RoboticsLabURJC/2023-tfg-adrian-madinabeitia src/2023-tfg-adrian-madinabeitia
 RUN apt update && rosdep update && rosdep install --from-paths src --ignore-src -r -y
 
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build"
@@ -154,5 +154,6 @@ RUN apt update && apt install -y alsa-utils pulseaudio
 RUN chown root:root /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/default_run.sh
 RUN chmod +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/default_run.sh
 
+WORKDIR /root/ws/src/2023-tfg-adrian-madinabeitia/drone_platforms/src
 
 CMD [ "/bin/bash" ]
