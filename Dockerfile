@@ -136,24 +136,25 @@ RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
 RUN echo "source /root/ws/install/setup.bash" >> ~/.bashrc
 # RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
 
-COPY ./entrypoint.bash /
-ENTRYPOINT [ "/entrypoint.bash" ]
-
-# Additional configuration
+# Execution permissions 
+#TODO: Change to original path (this only works after colcon)
 RUN chmod 1777 /tmp
+RUN chmod -R +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/
+
+# Autopilot configuration 
 RUN git clone https://github.com/PX4/PX4-Autopilot.git /root/ws/src/px4/PX4-Autopilot
 WORKDIR /root/ws/src/px4/PX4-Autopilot
 RUN git submodule update --init --recursive
 RUN make px4_sitl
-RUN chmod +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/run_sitl.sh
-RUN chmod +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/default_run.sh
+
+
+#* Additional library's 
 RUN apt update && apt install -y dbus-x11 libcanberra-gtk-module libcanberra-gtk3-module
 RUN apt update && apt install -y alsa-utils
-RUN chmod -R +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/
 RUN apt update && apt install -y alsa-utils pulseaudio
-RUN chown root:root /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/default_run.sh
-RUN chmod +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/default_run.sh
 
-WORKDIR /root/ws/src/2023-tfg-adrian-madinabeitia/drone_platforms/src
+WORKDIR /root/ws
 
+COPY ./entrypoint.bash /
+ENTRYPOINT [ "/entrypoint.bash" ]
 CMD [ "/bin/bash" ]
