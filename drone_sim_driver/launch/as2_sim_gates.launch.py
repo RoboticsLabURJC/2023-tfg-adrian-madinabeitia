@@ -6,25 +6,23 @@ from launch.actions import DeclareLaunchArgument, ExecuteProcess, LogInfo, Opaqu
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
-namespace = "drone0"
+namespace= "drone0"
 sim_time = "true"
 
 env_vars = {
     'AEROSTACK2_SIMULATION_DRONE_ID': namespace
 }
 
-
 def exit_process_function(_launch_context, route, ns):
     subprocess.run(["bash", route, ns], check=True)
 
-
 def generate_launch_description():
-    sim_config = os.path.join(get_package_share_directory('drone_platforms'), 'config')
-    utils_path = os.path.join(get_package_share_directory('drone_platforms'), 'utils')
+    sim_config = os.path.join(get_package_share_directory('drone_sim_driver'), 'config')
+    utils_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'utils')
 
     world = DeclareLaunchArgument(
         'world',
-        default_value="../worlds/nurburgring_line.world"
+        default_value="../worlds/ocean.world"
     )
     yaw = DeclareLaunchArgument(
         'yaw',
@@ -47,13 +45,13 @@ def generate_launch_description():
                 args=[utils_path + '/end_tmux.sh', namespace]
             ),
             LogInfo(msg='Tmux session closed')
-        ]
+            ]
     )
 
     # Prepares the tmux session
     tmuxLauncher = ExecuteProcess(
-        cmd=['tmuxinator', 'start', '-n', namespace, '-p', sim_config + '/tmuxLaunch.yml',
-             "drone_namespace=" + namespace,
+        cmd=['tmuxinator', 'start', '-n', namespace, '-p', sim_config + '/tmuxLaunch.yml', 
+             "drone_namespace=" + namespace, 
              "simulation_time=" + sim_time,
              "config_path=" + sim_config],
 
@@ -66,20 +64,21 @@ def generate_launch_description():
         cmd=['gnome-terminal', '--', 'tmux', 'attach-session', '-t', namespace],
 
         # No additional window
-        # cmd=['tmux', 'attach-session', '-t', namespace],
+        #cmd=['tmux', 'attach-session', '-t', namespace],
         name="attach",
     )
 
+
     parseYaml = Node(
-        package='drone_platforms',
+        package='drone_sim_driver',
         executable='parseWorld.py',
         output='screen',
         arguments=[
             sim_config + '/world.json',
             LaunchConfiguration('world'),
-            '0.0', '0.0', '0.0', LaunchConfiguration('yaw')  # 3.14 # 3.54
+            '0.0', '0.0', '0.0', LaunchConfiguration('yaw') #3.14 # 3.54
         ],
-    )
+    )  
 
     return LaunchDescription([
         world,
@@ -87,5 +86,5 @@ def generate_launch_description():
         parseYaml,
         gazeboPx4,
         tmuxLauncher,
-        # tmuxAttach,
+        tmuxAttach,
     ])

@@ -56,6 +56,10 @@ We used de [aerostack2](https://github.com/aerostack2/aerostack2) platforms to u
 ```bash
 cd /PATH_TO_PACKAGE/drone_platforms/launch
 
+# Launch default circuit
+ros2 launch drone_platforms as2_sim_circuit.launch.py
+
+# Launching with arguments
 ros2 launch drone_platforms as2_sim_circuit.launch.py world:=/PATH_TO_WORLD/NAME.world yaw:=3.14
 ```
 
