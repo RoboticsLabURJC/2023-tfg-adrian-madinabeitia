@@ -2,3 +2,8 @@ drone_behaviors/data
 drone_platforms/models
 drone_behaviors/models
 drone_behaviors/results
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints

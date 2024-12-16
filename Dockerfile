@@ -122,7 +122,7 @@ RUN git clone https://github.com/aerostack2/aerostack2.git -b 1.0.9 src/aerostac
 RUN git clone https://github.com/RoboticsLabURJC/2023-tfg-adrian-madinabeitia src/2023-tfg-adrian-madinabeitia
 RUN apt update && rosdep update && rosdep install --from-paths src --ignore-src -r -y
 
-RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build"
+RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"
 
 WORKDIR /
 # used?
@@ -134,23 +134,9 @@ RUN echo "set -g mouse on" > ~/.tmux.conf
 
 RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
 RUN echo "source /root/ws/install/setup.bash" >> ~/.bashrc
-# RUN echo "source /opt/ros/$ROS_DISTRO/setup.bash" >> ~/.bashrc
 
-# Execution permissions 
-#TODO: Change to original path (this only works after colcon)
-RUN chmod 1777 /tmp
-RUN chmod -R +x /root/ws/install/as2_gazebo_classic_assets/share/as2_gazebo_classic_assets/scripts/
-
-# Autopilot configuration 
-RUN git clone https://github.com/PX4/PX4-Autopilot.git /root/ws/src/px4/PX4-Autopilot
-WORKDIR /root/ws/src/px4/PX4-Autopilot
-RUN git submodule update --init --recursive
-RUN make px4_sitl
-
-
-#* Additional library's 
+# Additional library's 
 RUN apt update && apt install -y dbus-x11 libcanberra-gtk-module libcanberra-gtk3-module
-RUN apt update && apt install -y alsa-utils
 RUN apt update && apt install -y alsa-utils pulseaudio
 
 WORKDIR /root/ws

@@ -14,7 +14,7 @@ export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/usr/share/gazebo-11/models
 export GAZEBO_PLUGIN_PATH=$GAZEBO_PLUGIN_PATH:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib/x86_64-linux-gnu/gazebo-11/plugins
 export GAZEBO_MODEL_PATH=$GAZEBO_MODEL_PATH:/root/ws/src/aerostack2/as2_simulation_assets/as2_gazebo_assets/models
-export PX4_FOLDER=/root/ws/src/px4/PX4-Autopilot
+export PX4_FOLDER=/PX4-Autopilot
 export AEROSTACK2_PATH=/root/ws/src/aerostack2
 source $AEROSTACK2_PATH/as2_cli/setup_env.bash
 AEROSTACK2_SIMULATION_DRONE_ID=drone0
