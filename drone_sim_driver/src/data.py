@@ -103,7 +103,7 @@ class rosbagDataset(Dataset):
     def __init__(self, main_dir, transform, boolAug=USE_AUGMENTATION, dataAugment=1) -> None:
         self.main_dir = main_dir
         self.transform = transform
-        self.minSamples = 0
+        self.minSamples = 1
         self.dataAugment = dataAugment
         
         self.imgData = []

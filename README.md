@@ -22,18 +22,18 @@ Usually, classical programming algorithms are used for drone control. The contro
 - [2023-tfg-adrian-madinabeitia](#2023-tfg-adrian-madinabeitia)
   - [Index](#index)
   - [Repository distribution](#repository-distribution)
-  - [Drone platforms](#drone-platforms)
+  - [Drone scenarios](#drone-scenarios)
   - [Training](#training)
-  - [Follow line application](#follow-line-application)
-    - [Algorithmic expert pilot](#algorithmic-expert-pilot)
+    - [Follow line application](#follow-line-application)
     - [Getting the best model](#getting-the-best-model)
+  - [Follow line application](#follow-line-application-1)
   - [Gate traversing application](#gate-traversing-application)
     - [1. Constant Altitude](#1-constant-altitude)
     - [2. Variable Altitude](#2-variable-altitude)
     - [Remote pilot control](#remote-pilot-control)
   - [License](#license)
 
----
+---*
 
 ---
 
@@ -47,31 +47,27 @@ The models and the dataset occupy significant space, so it was decided to use [h
 
 ---
 
-## Drone platforms
+## Drone scenarios
 
 We used de [aerostack2](https://github.com/aerostack2/aerostack2) platforms to utilize all the programmed behaviors in multiple drones. The platform launchers are in the package drone_platforms This package was created to separate the platform used from the behavior, thus allowing the developed software to be used in real drones in the future.
 
 1. For launching follow line world:
 
 ```bash
-cd /PATH_TO_PACKAGE/drone_platforms/launch
-
 # Launch default circuit
-ros2 launch drone_platforms as2_sim_circuit.launch.py
+ros2 launch drone_sim_driver as2_sim_circuit.launch.py
 
 # Launching with arguments
-ros2 launch drone_platforms as2_sim_circuit.launch.py world:=/PATH_TO_WORLD/NAME.world yaw:=3.14
+ros2 launch drone_sim_driver as2_sim_circuit.launch.py world:=/PATH_TO_WORLD/NAME.world yaw:=3.14
 ```
 
 2. For launching the gates world:
 
 ```bash
-cd /PATH_TO_PACKAGE/drone_platforms/src
-
-# Execute if you want to change the scenario
+# Execute if you want to change to a random scenario
 python3 python3 generateGateWorld.py
 
-ros2 ros2 launch drone_platforms as2_sim_gates.launch.py
+ros2 ros2 launch drone_sim_driver as2_sim_gates.launch.py
 ```
 
 ---
@@ -79,37 +75,86 @@ ros2 ros2 launch drone_platforms as2_sim_gates.launch.py
 
 ## Training
 
-Bot applications follows the same training scripts so that is how the basic training script is called:
+### Follow line application
 
-0. Access to the src drone_behaviors directory:
+You can try the expert pilot with the following command once the world is launched.
 
 ```bash
-cd /PATH_TO_PACKAGE/drone_behaviors/src/
+ros2 launch drone_sim_driver expertPilot.launch.py
 ```
 
-1. Converting rosbags to standard format dataset:
+If you want to generate a full dataset, go to the path **/drone_sim_diver/utils** and run:
 
 ```bash
-python3 features/rosbag2generalDataset.py --rosbags_path ROSBAGS_PATH
+./generateDataset.sh <record time> <output directory>
 ```
 
-1. Train a neural network with the standard format dataset, this script will receive the path of the dataset and will train the model specified in PATH_TO_NEW_NETWORK.tar:
+This command will run the expert pilot in different circuits, recording with rosbags all the needed measures. The record time is the time the drone will be racing in each circuit and the output directory where the data will be storaged. \\
+
+Once you have the raw dataset with rosbags, the next step is going to **/drone_sim_driver/src/features** and run the next script: 
 
 ```bash
+python3 rosbag2generalDataset.py --rosbags_path ROSBAGS_PATH
+```
 
+This will take all the rosbags in the folder and create two directories with a standard format dataset.
+
+- **Frontal images** It contains all the images captured with the drone.
+- **Labels:** It contains the velocities associated to each image.
+
+**Note:**
+It's recommended see the dataset images to delete failures or compensate the dataset 
+
+Once the dataset is generated, the next step is train the neural network:
+
+```bash
 ## model: Selects the model the user wants to train
 ## resume: Resume the training or creates a new one
 ## network: Network path
 ## Supports 4 dataset paths (--dp1, --dp2, --dp3, --dp4)
 
-python3 models/train.py --model [pilotNet|deepPilot] --resume [true or false] --network PATH_TO_NEW_NETWORK.tar --dp1 STD_DATASET_PATH1
+python3 models/train.py --model [pilotNet|deepPilot] --resume [bool] --network PATH_TO_NEW_NETWORK.tar --dp1 STD_DATASET_PATH1
 ```
 
-2. Back-up script for saving different weights distribution in one training:
+While the training script is running is recommended to execute the script **netCheckpointSaver.sh** for saving different wights distributions.
 
 ```bash
 ./utils/netCheckpointSaver.sh MODEL_PATH.tar
 ```
+
+Once the training is done you can test the trained neural network with:
+
+```bash
+ros2 launch drone_sim_driver neuralPilot.launch.py trace=[BOOL] out_dir=[OUT_DIR] network_path=[NET_PATH]
+```
+
+If you want to run this automatically you can run:
+
+```bash
+./utils/trainAndCheck.sh [dataset_dir] [output_dir] [model_name]
+```
+
+Where:
+
+* **Dataset dir:** Is the path where your dataset is stored 
+* **Output dir:** Where the logs will be saved and the paths followed by the different models trained. 
+* **Model name:** The trained models name which will be saved.
+
+If you want to make ALL the process run:
+
+```bash
+./utils/generateNeuralPilot.sh [output_dir] [model_name]
+```
+### Getting the best model
+
+To speed up the model selection process for this application, the following script was created. It executes a folder containing 𝑛 models and generates an image of the result for each on as the images below:
+
+<div align="center">
+<img width=350px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post17/result.png" alt="explode"></a>
+<img width=340px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post18/montmelo.png" alt="explode"></a>
+</div>
+
+
 
 ---
 ---
@@ -120,65 +165,7 @@ For the imitation learning validation in this exercise, we collected a dataset w
 
 [![Youtube video](https://img.youtube.com/vi/jJ4Xdin1gg4/0.jpg)](https://www.youtube.com/watch?v=jJ4Xdin1gg4)
 
-### Algorithmic expert pilot
-
-For this application, the [Pilot_Net](https://github.com/lhzlhz/PilotNet) network was used to control linear and angular velocity. The expert pilot is launched as:
-
-```bash
-#! First launch the platform
-
-## out_dir = Path where all the execution data will be stored.
-## trace = Shows the filtered image in another window 
-ros2 launch drone_behaviors expertPilot.launch.py out_dir:=PATH trace_arg:=BOOL
-```
-
-If you want to launch the neural pilot instead the expert pilot:
-
-```bash
-#! First launch the platform
-
-## out_dir = Path where all the execution data will be stored.
-## trace = Shows the filtered image in another window 
-## network_path = Model used for the velocity inference 
-ros2 launch drone_behaviors neuralPilot.launch.py out_dir:=PATH trace_arg:=BOOL network_path:=NET_PATH
-```
-
-In this application, automation scripts were created to facilitate training. To repeatedly launch the expert pilot while recording the dataset:
-
-```bash
-## TIME_RECORDING = Integer that sets the recording time for each circuit.
-## OUT_DIR = Path where all the execution data will be stored.
-
-cd /PATH_TO_PACKAGE/drone_behaviors/utils
-./generateDataset.sh TIME_RECORDING OUT_DIR
-
-```
-
-After that you can use the automate training:
-
-```bash
-./generateNeuralPilot OUT_DIR MODEL_DIR 
-```
-
-For forcing the exit of a tmux session:
-
-```bash
-./end_tmux.sh SESSION_NAME
-```
-
-### Getting the best model
-
-To speed up the model selection process for this application, the following script was created. It executes a folder containing 𝑛 models and generates an image of the result for each on as the images below:
-
-<div align="center">
-<img width=350px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post17/result.png" alt="explode"></a>
-<img width=340px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post18/montmelo.png" alt="explode"></a>
-</div>
-
 ---
-
----
-
 ## Gate traversing application
 
 In this application we collected two datasets, one more generic for the pilotNet training. The results of this application where successful too: 
