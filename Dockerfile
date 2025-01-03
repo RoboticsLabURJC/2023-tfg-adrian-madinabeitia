@@ -34,6 +34,7 @@ RUN sudo apt update && apt install -y \
     libeigen3-dev \
     libyaml-cpp-dev \
     libopencv-dev \
+    git-lfs \
 && rm -rf /var/lib/apt/lists/*
 
 # Install Gazebo 11
@@ -119,7 +120,8 @@ RUN git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git --branch v2.4
 RUN git clone https://github.com/PX4/px4_msgs.git src/px4/px4_msgs -b release/1.14
 
 RUN git clone https://github.com/aerostack2/aerostack2.git -b 1.0.9 src/aerostack2
-RUN git clone https://github.com/pariaspe/2023-tfg-adrian-madinabeitia.git src/2023-tfg-adrian-madinabeitia
+RUN git clone https://github.com/RoboticsLabURJC/2023-tfg-adrian-madinabeitia.git src/2023-tfg-adrian-madinabeitia
+RUN git clone https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset
 RUN apt update && rosdep update && rosdep install --from-paths src --ignore-src -r -y
 
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"

@@ -23,19 +23,14 @@ Usually, classical programming algorithms are used for drone control. The contro
   - [Index](#index)
   - [Repository distribution](#repository-distribution)
   - [Drone scenarios](#drone-scenarios)
-  - [Training](#training)
-    - [Follow line application](#follow-line-application)
-    - [Getting the best model](#getting-the-best-model)
-  - [Follow line application](#follow-line-application-1)
-  - [Gate traversing application](#gate-traversing-application)
+  - [Remote pilot control](#remote-pilot-control)
+  - [Follow line simulation](#follow-line-simulation)
+  - [Gate traversing simulation](#gate-traversing-simulation)
     - [1. Constant Altitude](#1-constant-altitude)
     - [2. Variable Altitude](#2-variable-altitude)
-    - [Remote pilot control](#remote-pilot-control)
   - [License](#license)
 
----*
 
----
 
 ## Repository distribution
 
@@ -45,11 +40,11 @@ We follow the following [repository distribution](https://medium.com/analytics-v
 
 The models and the dataset occupy significant space, so it was decided to use [hugging Face](https://huggingface.co/) to host all this data. Thus, a repository was created for the [dataset](https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation) and another for the [models](https://huggingface.co/Adrimapo/models_tfg_drone_simulation)
 
----
+
 
 ## Drone scenarios
 
-We used de [aerostack2](https://github.com/aerostack2/aerostack2) platforms to utilize all the programmed behaviors in multiple drones. The platform launchers are in the package drone_platforms This package was created to separate the platform used from the behavior, thus allowing the developed software to be used in real drones in the future.
+We used de [aerostack2](https://github.com/aerostack2/aerostack2) platforms to utilize all the programmed behaviors in multiple drones. The platform launchers are in the package drone_platforms This package was created to separate the platform used from the behavior, thus allowing the developed software to be used in real drones.
 
 1. For launching follow line world:
 
@@ -70,103 +65,36 @@ python3 python3 generateGateWorld.py
 ros2 ros2 launch drone_sim_driver as2_sim_gates.launch.py
 ```
 
----
----
+## Remote pilot control
 
-## Training
-
-### Follow line application
-
-You can try the expert pilot with the following command once the world is launched.
-
-```bash
-ros2 launch drone_sim_driver expertPilot.launch.py
-```
-
-If you want to generate a full dataset, go to the path **/drone_sim_diver/utils** and run:
-
-```bash
-./generateDataset.sh <record time> <output directory>
-```
-
-This command will run the expert pilot in different circuits, recording with rosbags all the needed measures. The record time is the time the drone will be racing in each circuit and the output directory where the data will be storaged. \\
-
-Once you have the raw dataset with rosbags, the next step is going to **/drone_sim_driver/src/features** and run the next script: 
-
-```bash
-python3 rosbag2generalDataset.py --rosbags_path ROSBAGS_PATH
-```
-
-This will take all the rosbags in the folder and create two directories with a standard format dataset.
-
-- **Frontal images** It contains all the images captured with the drone.
-- **Labels:** It contains the velocities associated to each image.
-
-**Note:**
-It's recommended see the dataset images to delete failures or compensate the dataset 
-
-Once the dataset is generated, the next step is train the neural network:
-
-```bash
-## model: Selects the model the user wants to train
-## resume: Resume the training or creates a new one
-## network: Network path
-## Supports 4 dataset paths (--dp1, --dp2, --dp3, --dp4)
-
-python3 models/train.py --model [pilotNet|deepPilot] --resume [bool] --network PATH_TO_NEW_NETWORK.tar --dp1 STD_DATASET_PATH1
-```
-
-While the training script is running is recommended to execute the script **netCheckpointSaver.sh** for saving different wights distributions.
-
-```bash
-./utils/netCheckpointSaver.sh MODEL_PATH.tar
-```
-
-Once the training is done you can test the trained neural network with:
-
-```bash
-ros2 launch drone_sim_driver neuralPilot.launch.py trace=[BOOL] out_dir=[OUT_DIR] network_path=[NET_PATH]
-```
-
-If you want to run this automatically you can run:
-
-```bash
-./utils/trainAndCheck.sh [dataset_dir] [output_dir] [model_name]
-```
-
-Where:
-
-* **Dataset dir:** Is the path where your dataset is stored 
-* **Output dir:** Where the logs will be saved and the paths followed by the different models trained. 
-* **Model name:** The trained models name which will be saved.
-
-If you want to make ALL the process run:
-
-```bash
-./utils/generateNeuralPilot.sh [output_dir] [model_name]
-```
-### Getting the best model
-
-To speed up the model selection process for this application, the following script was created. It executes a folder containing 𝑛 models and generates an image of the result for each on as the images below:
+Since this expert pilot will be autopiloted, the following control configuration was chosen to teleoperate the drone:
 
 <div align="center">
-<img width=350px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post17/result.png" alt="explode"></a>
-<img width=340px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post18/montmelo.png" alt="explode"></a>
+<img width=700px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post22/controller.png" alt="explode"></a>
 </div>
 
 
+```bash
+#! First launch the platform
 
----
----
+## out_dir = Path where all the execution data will be stored.
+## net_dir = PilotNet model path 
+## deep_dir = DeepPilot model path
 
-## Follow line application
+ros2 launch drone_behaviors remoteControl.launch.py out_dir:=PATH net_dir:=PILOT_NET_MODEL deep_dir:=DEEP_PILOT_MODEL
+```
+
+
+## Follow line simulation
+
+Click the nex [link](./docs/Simulated_drone_followLine.md) for the guide of the follow line application.
 
 For the imitation learning validation in this exercise, we collected a dataset with an algorithmic pilot. Clicking the next image you can watch the demo video:
 
 [![Youtube video](https://img.youtube.com/vi/jJ4Xdin1gg4/0.jpg)](https://www.youtube.com/watch?v=jJ4Xdin1gg4)
 
 ---
-## Gate traversing application
+## Gate traversing simulation
 
 In this application we collected two datasets, one more generic for the pilotNet training. The results of this application where successful too: 
 
@@ -182,28 +110,7 @@ In this video, you can see the drone adjusting its altitude:
 
 [![Watch the video](https://img.youtube.com/vi/Q1zBNXdW7Ns/0.jpg)](https://www.youtube.com/watch?v=Q1zBNXdW7Ns)
 
-### Remote pilot control
-
-Since this expert pilot will be autopiloted, the following control configuration was chosen to teleoperate the drone:
-
-<div align="center">
-<img width=700px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post22/controller.png" alt="explode"></a>
-</div>
-
-Launch this expert pilot with the following command:
-
-```bash
-#! First launch the platform
-
-## out_dir = Path where all the execution data will be stored.
-## net_dir = PilotNet model path 
-## deep_dir = DeepPilot model path
-
-ros2 launch drone_behaviors remoteControl.launch.py out_dir:=PATH net_dir:=PILOT_NET_MODEL deep_dir:=DEEP_PILOT_MODEL
-```
-
 ---
-
 ---
 
 ## License
