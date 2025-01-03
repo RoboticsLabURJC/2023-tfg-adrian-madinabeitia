@@ -317,5 +317,4 @@ class rosbagDataset(Dataset):
                     rawDataset.append(data)
 
         self.dataset = rawDataset
-        return rawDataset
-
+        return rawDatasets

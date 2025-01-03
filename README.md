@@ -115,4 +115,11 @@ In this video, you can see the drone adjusting its altitude:
 
 ## License
 
-<a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0"><img alt="Apache License" style="border-width:0" src="https://www.apache.org/img/asf-estd-1999-logo.jpg" /></a><br/> </a><br/>This work is licensed under a <a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0">Apache license 2.0
+<div style="text-align: center;">
+    <a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0">
+        <img alt="Apache License" style="border-width:0" src="https://www.apache.org/img/asf-estd-1999-logo.jpg" />
+    </a>
+    <br/>
+    This work is licensed under a 
+    <a rel="license" href="https://www.apache.org/licenses/LICENSE-2.0">Apache License 2.0</a>
+</div>

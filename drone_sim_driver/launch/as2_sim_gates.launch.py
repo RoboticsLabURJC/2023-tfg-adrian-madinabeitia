@@ -7,7 +7,7 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 namespace= "drone0"
-sim_time = "true"
+sim_time= "true"
 
 env_vars = {
     'AEROSTACK2_SIMULATION_DRONE_ID': namespace
@@ -19,10 +19,11 @@ def exit_process_function(_launch_context, route, ns):
 def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_sim_driver'), 'config')
     utils_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'utils')
+    worlds_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'worlds')
 
     world = DeclareLaunchArgument(
         'world',
-        default_value="../worlds/ocean.world"
+        default_value="ocean.world"
     )
     yaw = DeclareLaunchArgument(
         'yaw',
@@ -75,10 +76,10 @@ def generate_launch_description():
         output='screen',
         arguments=[
             sim_config + '/world.json',
-            LaunchConfiguration('world'),
-            '0.0', '0.0', '0.0', LaunchConfiguration('yaw') #3.14 # 3.54
+            [worlds_path, '/', LaunchConfiguration('world')],
+            '0.0', '0.0', '0.0', LaunchConfiguration('yaw')  # 3.14 # 3.54
         ],
-    )  
+    )
 
     return LaunchDescription([
         world,

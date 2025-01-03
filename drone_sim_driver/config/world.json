@@ -1,5 +1,5 @@
 {
-    "world": "../worlds/ocean.world",
+    "world": "/root/ws/install/drone_sim_driver/share/drone_sim_driver/worlds/ocean.world",
     "drones": [
         {
             "model": "iris_dual_cam",

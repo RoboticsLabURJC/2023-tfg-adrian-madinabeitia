@@ -17,19 +17,29 @@ def generate_launch_description():
         executable='ds4_driver_node.py',
     )
 
+    # Declare launch arguments
     out_dir = DeclareLaunchArgument(
-        'out_dir',
-        default_value="./outDir"
+        'output_dir',
+        default_value="./outDir",
+        description="Directory to save profiling files"
+    )
+
+    altitude_control = DeclareLaunchArgument(
+        'altitude_control',
+        default_value="false",
+        description="If true, a neural network will be required for altitude control"
     )
 
     net_dir = DeclareLaunchArgument(
-        'net_dir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/gateV2Normal/net-1.tar"
+        'network_dir',
+        default_value="__none__",
+        description="Direction neural network"
     )
 
-    deepDir = DeclareLaunchArgument(
-        'deepDir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/deepPilot/z/net-7.tar" # 7-9
+    dp_dir = DeclareLaunchArgument(
+        'dp_dir',
+        default_value="__none__",
+        description="Altitude neural network"
     )
 
     control = Node(
@@ -37,16 +47,18 @@ def generate_launch_description():
         executable='remoteControl.py',
         output='screen',
         arguments=[
-            '--output_dir', LaunchConfiguration('out_dir'),
-            '--network_dir', LaunchConfiguration('net_dir'),
-            '--dp_dir', LaunchConfiguration('deepDir')
+            '--output_dir', LaunchConfiguration('output_dir'),
+            '--altitude_control', LaunchConfiguration('altitude_control'),
+            '--network_dir', LaunchConfiguration('network_dir'),
+            '--dp_dir', LaunchConfiguration('dp_dir')
         ]
     )
 
     return LaunchDescription([
-        net_dir,
         out_dir,
-        deepDir,
+        altitude_control,
+        net_dir,
+        dp_dir,
         controller,
         control,
     ])

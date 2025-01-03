@@ -93,6 +93,7 @@ RUN python3.10 -m pip install \
     rosdep \
     future \
     colcon-common-extensions \
+    ds4drv \
     torch==2.4.1 matplotlib albumentations torchvision Pillow numpy
 RUN sudo pip3 install jsonschema==4.18.0
 
@@ -116,13 +117,34 @@ RUN git clone https://github.com/naoki-mizuno/ds4_driver.git src/ds4_driver
 RUN git clone https://github.com/aerostack2/as2_platform_pixhawk.git -b 1.0.9 src/px4/as2_platform_pixhawk
 RUN git clone https://github.com/eProsima/Micro-XRCE-DDS-Agent.git --branch v2.4.1 src/px4/Micro-XRCE-DDS-Agent
 
-##
 RUN git clone https://github.com/PX4/px4_msgs.git src/px4/px4_msgs -b release/1.14
 
 RUN git clone https://github.com/aerostack2/aerostack2.git -b 1.0.9 src/aerostack2
 RUN git clone https://github.com/RoboticsLabURJC/2023-tfg-adrian-madinabeitia.git src/2023-tfg-adrian-madinabeitia
 RUN git clone https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset
 RUN apt update && rosdep update && rosdep install --from-paths src --ignore-src -r -y
+
+# Gets the trained models
+RUN mkdir -p /root/ws/src/2023-tfg-adrian-madinabeitia/neural_models
+RUN wget -O /root/ws/src/neural_models/gate_constant_altitude_v1.tar \
+        "https://huggingface.co/Adrimapo/models_tfg_drone_simulation/blob/main/gateTravesing/gate_constant_altitude_v1.tar" \
+    && wget -O /root/ws/src/neural_models/gate_full_control_v1.tar \
+        "https://huggingface.co/Adrimapo/models_tfg_drone_simulation/blob/main/gateTravesing/gate_full_control_v1.tar"
+
+# Gets the dataset 
+RUN mkdir -p /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset
+RUN wget -O /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset/gatesConstantAltitude1.zip \
+        "https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation/blob/main/gate_travesing/gatesConstantAltitude1.zip" \
+    && wget -O /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset/gatesConstantAltitude2.tar \
+        "https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation/blob/main/gate_travesing/gatesConstantAltitude2.zip" \
+    && wget -O /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset/gatesFullControl1.tar \
+        "https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation/blob/main/gate_travesing/gatesFullControl1.zip" \
+    && wget -O /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset/gatesFullControl2.tar \
+        "https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation/blob/main/gate_travesing/gatesFullControl2.zip" \
+    && wget -O /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset/gatesFullControl3.tar \
+        "https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation/blob/main/gate_travesing/gatesFullControl3.zip"
+
+
 
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"
 
