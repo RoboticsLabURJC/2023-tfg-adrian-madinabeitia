@@ -10,12 +10,14 @@ services:
       PX4_FOLDER: /PX4-Autopilot
       ROS_LOCALHOST_ONLY: 0
       ROS_DOMAIN_ID: 0
+      NVIDIA_VISIBLE_DEVICES: all  # Make all GPUs visible to the container
     privileged: true
     volumes:
       # X11
       - ~/.Xauthority:/root/.Xauthority
-      # 
+      # Device access
       - /dev/:/dev
       - .:/root/ws/src/2023-tfg-adrian-madinabeitia
     network_mode: "host"
+    runtime: nvidia  # Enable NVIDIA runtime for GPU access
     command: tail -f /dev/null
