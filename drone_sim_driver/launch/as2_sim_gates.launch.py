@@ -19,10 +19,11 @@ def exit_process_function(_launch_context, route, ns):
 def generate_launch_description():
     sim_config = os.path.join(get_package_share_directory('drone_sim_driver'), 'config')
     utils_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'utils')
+    worlds_path = os.path.join(get_package_share_directory('drone_sim_driver'), 'worlds')
 
     world = DeclareLaunchArgument(
         'world',
-        default_value="../worlds/ocean.world"
+        default_value="generatedWorld.world"
     )
     yaw = DeclareLaunchArgument(
         'yaw',
@@ -50,8 +51,8 @@ def generate_launch_description():
 
     # Prepares the tmux session
     tmuxLauncher = ExecuteProcess(
-        cmd=['tmuxinator', 'start', '-n', namespace, '-p', sim_config + '/tmuxLaunch.yml', 
-             "drone_namespace=" + namespace, 
+        cmd=['tmuxinator', 'start', '-n', namespace, '-p', sim_config + '/tmuxLaunch.yml',
+             "drone_namespace=" + namespace,
              "simulation_time=" + sim_time,
              "config_path=" + sim_config],
 
@@ -75,8 +76,8 @@ def generate_launch_description():
         output='screen',
         arguments=[
             sim_config + '/world.json',
-            LaunchConfiguration('world'),
-            '0.0', '0.0', '0.0', LaunchConfiguration('yaw') #3.14 # 3.54
+            [worlds_path, '/', LaunchConfiguration('world')],
+            '0.0', '0.0', '0.0', LaunchConfiguration('yaw')  # 3.14 # 3.54
         ],
     )  
 

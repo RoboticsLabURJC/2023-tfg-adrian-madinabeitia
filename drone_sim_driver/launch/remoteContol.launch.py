@@ -24,12 +24,12 @@ def generate_launch_description():
 
     net_dir = DeclareLaunchArgument(
         'net_dir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/gateV2Normal/net-1.tar"
+        default_value="None"
     )
 
-    deepDir = DeclareLaunchArgument(
-        'deepDir',
-        default_value="/home/adrian/workspace/src/tfg/drone_sim_driver/models/deepPilot/z/net-7.tar" # 7-9
+    dp_dir = DeclareLaunchArgument(
+        'dp_dir',
+        default_value="None"
     )
 
     control = Node(
@@ -39,14 +39,14 @@ def generate_launch_description():
         arguments=[
             '--output_dir', LaunchConfiguration('out_dir'),
             '--network_dir', LaunchConfiguration('net_dir'),
-            '--dp_dir', LaunchConfiguration('deepDir')
+            '--dp_dir', LaunchConfiguration('dp_dir')
         ]
     )
 
     return LaunchDescription([
         net_dir,
         out_dir,
-        deepDir,
+        dp_dir,
         controller,
         control,
     ])

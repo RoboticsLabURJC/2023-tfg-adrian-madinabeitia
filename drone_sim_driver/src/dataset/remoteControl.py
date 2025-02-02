@@ -30,7 +30,7 @@ sys.path.append(package_path)
 
 from src.control_functions import save_timestamps, save_profiling, PID
 from src.models.models import pilotNet, DeepPilot
-from src.models.train import load_checkpoint
+from src.train import load_checkpoint
 from src.models.transforms import pilotNet_transforms, deepPilot_Transforms
 from src.features.processImages import apply_filters
 
@@ -117,14 +117,16 @@ class droneController(DroneInterface):
         self.landBool = False
         self.constZ = False
         self.lastFile = ''
-        self.neuralControl = False
 
-        useNeuralNetwork = True
+        self.neuralControl = False
+        self.nerualDir = network_directory
+        self.deepDir = deep_dir
+
         self.imageTensor = None
         self.image = None
         self.altitudePos = 0
         
-        if useNeuralNetwork:
+        if self.nerualDir != None:
             self.device = torch.device("cuda:0")
 
             # Gets pilotNet
@@ -132,6 +134,7 @@ class droneController(DroneInterface):
             load_checkpoint(network_directory, self.pilotNet)
             self.pilotNet.to(self.device) 
 
+        if self.deepDir != None:
             # Gets deepPilot
             self.deepPilot = DeepPilot([64, 64, 3]) 
             load_checkpoint(deep_dir, self.deepPilot)
@@ -146,6 +149,7 @@ class droneController(DroneInterface):
         self.controller_vel = []
         self.drone_vel = []
 
+    
 
     def open_bag(self):
         ## Creates the writer
@@ -196,17 +200,14 @@ class droneController(DroneInterface):
 
 
         # Gets the image for the neural network
-        #if self.neuralControl or self.recordRosbag:
         bridge = CvBridge()
         self.image = msg
         cv_image = bridge.imgmsg_to_cv2(msg, "bgr8")
         resized_image = cv2.resize(cv_image, (int(224), int(224)))
-            
+                
         # Processing for reprocessed image
-        #resized_image = apply_filters(resized_image)
-
         self.image_array = np.array(resized_image)
-        
+            
         # Convert the resized image to a tensor for inference
         img_tensor = pilotNet_transforms(self.image_array).to(self.device)
         self.imageTensor = img_tensor.unsqueeze(0)
@@ -216,7 +217,7 @@ class droneController(DroneInterface):
                 self.writer.write(
                     self.imageTopic,
                     serialize_message(self.image),
-                    self.get_clock().now().nanoseconds)    
+                self.get_clock().now().nanoseconds)    
 
             
 
@@ -288,20 +289,20 @@ class droneController(DroneInterface):
         velY = vx * math.sin(self.orientation[2]) + vy * math.cos(self.orientation[2])
 
         # Z position control
-        # errorZ = float(pz) - self.position[2]
-        # vz = self.altitude_pid.get_pid(errorZ)
+        if self.deepDir != None:
+            imgTransform = deepPilot_Transforms(None)
+            data = PilImage.fromarray(self.image_array)
+            image = imgTransform(data).unsqueeze(0)
+            image_tensor = torch.FloatTensor(image).to(self.device)
+            vz  = self.deepPilot(image_tensor)
+            #self.get_logger().info("Altitude = %d" % vz)
+        else:
+            # Manual control
+            errorZ = float(pz) - self.position[2]
+            vz = self.altitude_pid.get_pid(errorZ)
 
-        # self.controller_vel.append(pz)
-        # self.drone_vel.append(self.position[2])
-        
-        #!Deep pilot
-        imgTransform = deepPilot_Transforms(None)
-        data = PilImage.fromarray(self.image_array)
-        image = imgTransform(data).unsqueeze(0)
-        image_tensor = torch.FloatTensor(image).to(self.device)
-        vz  = self.deepPilot(image_tensor)
-        #self.get_logger().info("Altitude = %d" % vz)
-
+            self.controller_vel.append(pz)
+            self.drone_vel.append(self.position[2])
 
         self.altitudePos= vz
         # Sends the velocity command
@@ -434,6 +435,10 @@ class droneController(DroneInterface):
                 self.get_logger().info("Pilot controlling...")
             
             else:
+                if self.nerualDir == None:
+                    self.get_logger().info("No neural network loaded")
+                    return
+                
                 self.neuralControl = True
                 self.get_logger().info("Neural pilot controlling...")
             
@@ -448,9 +453,6 @@ class droneController(DroneInterface):
             angularVel =  self.leftY * self.angular_limit 
             linearVelRaw = self.leftX * self.linear_limit 
             lateralVel = self.rightY * self.linear_limit / 1.5  
-
-
-
 
         else: 
             if self.imageTensor is not None:
@@ -505,7 +507,8 @@ class droneController(DroneInterface):
                 self.timeTrial = time.time()
 def goal():
     time.sleep(5)
-    print("Aaaaaaaa")
+    return True
+
 
 def sigint_handler(signum, drone):
     # Lands the drone and clean all 
@@ -534,6 +537,11 @@ def main(args=None):
     parsed_args, _ = parser.parse_known_args()
     signal.signal(signal.SIGINT, lambda signum, frame: sigint_handler(signum, frame, drone))
 
+    if parsed_args.network_dir == "None":
+        parsed_args.network_dir = None
+    
+    if parsed_args.dp_dir == "None":
+        parsed_args.dp_dir = None
 
     # Controller node
     drone = droneController(drone_id="drone0", verbose=False, use_sim_time=True, 
@@ -568,6 +576,7 @@ def main(args=None):
     sigint_handler(signal.SIGINT, drone)
     
     exit()
+
 
 if __name__ == '__main__':
     main()
