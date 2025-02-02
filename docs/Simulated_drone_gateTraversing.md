@@ -1,19 +1,38 @@
-## Follow line application
+# Gate traversing application
 
-You can try the expert pilot with the following command once the world is launched.
-
-```bash
-ros2 launch drone_sim_driver expertPilot.launch.py
-```
-
-If you want to generate a full dataset, go to the path **/drone_sim_diver/utils** and run:
+## Generate world
+For creating a new gate circuit you can modify the next script with some functions for creating new gate circuits:
 
 ```bash
-tmux # First init a tmux session 
-./generateDataset.sh <record time> <output directory>
+python3 drone_sim_driver/src/generateGateWorld.py
 ```
 
-This command will run the expert pilot in different circuits, recording with rosbags all the needed measures. The record time is the time the drone will be racing in each circuit and the output directory where the data will be storaged. \\
+Then launch the world with:
+
+```bash
+ros2 launch drone_sim_driver as2_sim_gates.launch.py
+```
+
+## RemotePilot
+
+For launching the remote pilot:
+
+```bash
+ros2 launch drone_sim_driver remoteContol.launch.py net_dir:=../../models_tfg_drone_simulation/gateTravesing/gate_constant_altitude_v1.tar dp_dir:=../../models_tfg_drone_simulation/gateTravesing/gate_full_control_v1.tar
+```
+The arguments are: 
+* **out_dir:** Directory were the logs will be stored.
+* **net_dir:** Pilot net neural network path
+* **dp_dir:** Deep pilot (control in Z) neural network path
+
+If net_dir is none, the remote controller won't have neural control. If the dp_dir is not set, the altitude controll will be manual. 
+
+<div align="center">
+<img width=700px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post22/controller.png" alt="explode"></a>
+</div>
+
+
+## Rosbags to general dataset 
 
 Once you have the raw dataset with rosbags, the next step is going to **/drone_sim_driver/src/features** and run the next script: 
 
@@ -29,6 +48,7 @@ This will take all the rosbags in the folder and create two directories with a s
 **Note:**
 It's recommended see the dataset images to delete failures or compensate the dataset 
 
+## Train the neural network
 Once the dataset is generated, the next step is train the neural network:
 
 ```bash
@@ -37,45 +57,14 @@ Once the dataset is generated, the next step is train the neural network:
 ## network: Network path
 ## Supports 4 dataset paths (--dp1, --dp2, --dp3, --dp4)
 
-python3 models/train.py --model [pilotNet|deepPilot] --resume [bool] --network PATH_TO_NEW_NETWORK.tar --dp1 STD_DATASET_PATH1
+python3 drone_sim_driver/src/models/train.py --model [pilotNet|deepPilot] --resume [bool] --network PATH_TO_NEW_NETWORK.tar --dp1 STD_DATASET_PATH1
 ```
 
 While the training script is running is recommended to execute the script **netCheckpointSaver.sh** for saving different wights distributions.
 
 ```bash
-./utils/netCheckpointSaver.sh MODEL_PATH.tar
+drone_sim_driver/utils/netCheckpointSaver.sh MODEL_PATH.tar
 ```
 
 Once the training is done you can test the trained neural network with:
 
-```bash
-ros2 launch drone_sim_driver neuralPilot.launch.py trace=[BOOL] out_dir=[OUT_DIR] network_path=[NET_PATH]
-```
-
-If you want to run this automatically you can run:
-
-```bash
-tmux 
-./utils/trainAndCheck.sh [dataset_dir] [output_dir] [model_name]
-```
-
-Where:
-
-* **Dataset dir:** Is the path where your dataset is stored 
-* **Output dir:** Where the logs will be saved and the paths followed by the different models trained. 
-* **Model name:** The trained models name which will be saved.
-
-If you want to make ALL the process run:
-
-```bash
-tmux
-./utils/generateNeuralPilot.sh [output_dir] [model_name]
-```
-### Getting the best model
-
-To speed up the model selection process for this application, the following script was created. It executes a folder containing 𝑛 models and generates an image of the result for each on as the images below:
-
-<div align="center">
-<img width=350px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post17/result.png" alt="explode"></a>
-<img width=340px src="https://roboticslaburjc.github.io/2023-tfg-adrian-madinabeitia/assets/images/post18/montmelo.png" alt="explode"></a>
-</div>

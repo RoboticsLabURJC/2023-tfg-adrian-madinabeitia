@@ -91,7 +91,7 @@ def randomLine():
 
 # poses = randomLine()
 
-
+## Defined circle poses
 poses = [
         [-6.47404, -6.98526, 2.7153, 0, 0, -2.96],
         [-13.5561, -9.59085, -0.4432, 0, 0, 0],
@@ -150,7 +150,7 @@ xml_instances = [xml_template.format(i, ' '.join(map(str, pose))) for i, pose in
 # Generate the final XML content
 xml_content = f'''<?xml version="1.0" ?>
 <sdf version="1.6">
-  <world name="ocean">
+  <world name="generatedWorld">
 
     <include> 
       <uri>model://grass_plane</uri>
@@ -192,6 +192,6 @@ xml_content = f'''<?xml version="1.0" ?>
 </sdf>
 '''
 
-# Write the content to the ocean.world file
-with open('../worlds/ocean.world', 'w') as file:
+# Write the content to the generatedWorld.world file
+with open('../worlds/generatedWorld.world', 'w') as file:
     file.write(xml_content)

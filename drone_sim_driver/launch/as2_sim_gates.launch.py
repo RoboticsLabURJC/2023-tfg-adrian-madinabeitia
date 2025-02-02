@@ -23,7 +23,7 @@ def generate_launch_description():
 
     world = DeclareLaunchArgument(
         'world',
-        default_value="ocean.world"
+        default_value="generatedWorld.world"
     )
     yaw = DeclareLaunchArgument(
         'yaw',

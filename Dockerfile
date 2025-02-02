@@ -124,12 +124,13 @@ RUN git clone https://github.com/RoboticsLabURJC/2023-tfg-adrian-madinabeitia.gi
 RUN git clone https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation /root/ws/src/2023-tfg-adrian-madinabeitia/original_dataset
 RUN apt update && rosdep update && rosdep install --from-paths src --ignore-src -r -y
 
+## Models and datasets
+RUN git clone https://huggingface.co/Adrimapo/models_tfg_drone_simulation /root/ws/src/2023-tfg-adrian-madinabeitia/neural_models
+RUN git clone https://huggingface.co/datasets/Adrimapo/dataset_tfg_drone_simulation /root/ws/src/2023-tfg-adrian-madinabeitia/dataset
+
 RUN /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --symlink-install"
 
 WORKDIR /
-# used?
-RUN git clone https://github.com/Adrimapo/project_crazyflie_gates.git
-RUN git clone https://github.com/aerostack2/project_px4_vision src/px4/project_px4_vision
 
 RUN pip3 install PySimpleGUI-4-foss
 RUN echo "set -g mouse on" > ~/.tmux.conf 
