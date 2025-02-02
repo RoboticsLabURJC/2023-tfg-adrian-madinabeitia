@@ -101,7 +101,7 @@ RUN python3.10 -m pip install argparse==1.4.0 argcomplete==3.1.2 coverage==7.3.2
     empy==3.3.4 jinja2==3.1.2 kconfiglib==14.1.0 matplotlib>=3.0 numpy==1.23.4 nunavut==1.1.0 \
     packaging==23.2 pkgconfig==1.5.5 pyros-genmsg==0.5.8 pyulog==1.0.1 pyyaml==6.0.1 \
     requests==2.22.0 serial==0.0.97 six==1.14.0 toml==0.10.2 sympy>=1.10.1 \
-    psutil==5.9.0 utm==0.7.0 psycopg2 rosbags==0.10.6 tensorboard==2.18.0
+    psutil==5.9.0 utm==0.7.0 psycopg2 rosbags==0.10.6 tensorboard==2.18.0 ds4drv==0.5.1\
 
 # Install PX4
 RUN git clone -b v1.14.3 https://github.com/PX4/PX4-Autopilot.git --recursive \
